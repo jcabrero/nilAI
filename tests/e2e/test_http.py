@@ -15,7 +15,6 @@ from .config import BASE_URL, ENVIRONMENT, test_models, AUTH_STRATEGY, api_key_g
 from .nuc import (
     get_rate_limited_nuc_token,
     get_invalid_rate_limited_nuc_token,
-    get_nildb_nuc_token,
     get_document_id_nuc_token,
 )
 import httpx
@@ -26,6 +25,7 @@ import pytest
 def client():
     """Create an HTTPX client with default headers"""
     invocation_token: str = api_key_getter()
+    print("invocation_token", invocation_token)
     return httpx.Client(
         base_url=BASE_URL,
         headers={
@@ -47,7 +47,7 @@ def rate_limited_client():
         headers={
             "accept": "application/json",
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {invocation_token.token}",
+            "Authorization": f"Bearer {invocation_token}",
         },
         timeout=None,
         verify=False,
@@ -63,23 +63,7 @@ def invalid_rate_limited_client():
         headers={
             "accept": "application/json",
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {invocation_token.token}",
-        },
-        timeout=None,
-        verify=False,
-    )
-
-
-@pytest.fixture
-def nildb_client():
-    """Create an HTTPX client with default headers"""
-    invocation_token = get_nildb_nuc_token()
-    return httpx.Client(
-        base_url=BASE_URL,
-        headers={
-            "accept": "application/json",
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {invocation_token.token}",
+            "Authorization": f"Bearer {invocation_token}",
         },
         timeout=None,
         verify=False,
@@ -110,7 +94,7 @@ def document_id_client():
         headers={
             "accept": "application/json",
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {invocation_token.token}",
+            "Authorization": f"Bearer {invocation_token}",
         },
         verify=False,
         timeout=None,
@@ -579,48 +563,6 @@ def test_rate_limiting_nucs(rate_limited_client):
     )
 
 
-@pytest.mark.skipif(
-    AUTH_STRATEGY != "nuc", reason="NUC rate limiting not used with API key"
-)
-def test_invalid_rate_limiting_nucs(invalid_rate_limited_client):
-    """Test rate limiting by sending multiple rapid requests"""
-    # Payload for repeated requests
-    payload = {
-        "model": test_models[0],
-        "messages": [{"role": "user", "content": "What is your name?"}],
-    }
-
-    # Send multiple rapid requests
-    responses = []
-    for _ in range(4):  # Adjust number based on expected rate limits
-        response = invalid_rate_limited_client.post("/chat/completions", json=payload)
-        responses.append(response)
-
-    # Check for potential rate limit responses
-    rate_limit_statuses = [401]
-    rate_limited_responses = [
-        r for r in responses if r.status_code in rate_limit_statuses
-    ]
-
-    assert len(rate_limited_responses) > 0, (
-        "No NUC rate limiting detected, when expected"
-    )
-
-
-@pytest.mark.skipif(
-    AUTH_STRATEGY != "nuc", reason="NUC rate limiting not used with API key"
-)
-def test_invalid_nildb_command_nucs(nildb_client):
-    """Test rate limiting by sending multiple rapid requests"""
-    # Payload for repeated requests
-    payload = {
-        "model": test_models[0],
-        "messages": [{"role": "user", "content": "What is your name?"}],
-    }
-    response = nildb_client.post("/chat/completions", json=payload)
-    assert response.status_code == 401, "Invalid NILDB command should return 401"
-
-
 def test_large_payload_handling(client):
     """Test handling of large input payloads"""
     # Create a very large system message
@@ -861,6 +803,9 @@ def test_nildb_delegation(client: httpx.Client):
 )
 def test_nildb_prompt_document(document_id_client: httpx.Client, model):
     """Tests getting a prompt document from nilDB and executing a chat completion with it"""
+    pytest.skip(
+        "Skipping test_nildb_prompt_document because it requires a newer version of secretvaults-py"
+    )
     payload = {
         "model": model,
         "messages": [

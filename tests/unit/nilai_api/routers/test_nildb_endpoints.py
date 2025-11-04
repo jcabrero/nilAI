@@ -7,7 +7,6 @@ from nilai_api.db.users import RateLimits, UserData, UserModel
 from nilai_api.handlers.nildb.api_model import (
     PromptDelegationToken,
 )
-from datetime import datetime, timezone
 
 
 class TestNilDBEndpoints:
@@ -17,14 +16,7 @@ class TestNilDBEndpoints:
     def mock_subscription_owner_user(self):
         """Mock user data for subscription owner"""
         mock_user_model = MagicMock(spec=UserModel)
-        mock_user_model.name = "Subscription Owner"
-        mock_user_model.userid = "owner-id"
-        mock_user_model.apikey = "owner-id"  # Same as userid for subscription owner
-        mock_user_model.prompt_tokens = 0
-        mock_user_model.completion_tokens = 0
-        mock_user_model.queries = 0
-        mock_user_model.signup_date = datetime.now(timezone.utc)
-        mock_user_model.last_activity = datetime.now(timezone.utc)
+        mock_user_model.user_id = "owner-id"
         mock_user_model.rate_limits = (
             RateLimits().get_effective_limits().model_dump_json()
         )
@@ -36,14 +28,7 @@ class TestNilDBEndpoints:
     def mock_regular_user(self):
         """Mock user data for regular user (not subscription owner)"""
         mock_user_model = MagicMock(spec=UserModel)
-        mock_user_model.name = "Regular User"
-        mock_user_model.userid = "user-id"
-        mock_user_model.apikey = "different-api-key"  # Different from userid
-        mock_user_model.prompt_tokens = 0
-        mock_user_model.completion_tokens = 0
-        mock_user_model.queries = 0
-        mock_user_model.signup_date = datetime.now(timezone.utc)
-        mock_user_model.last_activity = datetime.now(timezone.utc)
+        mock_user_model.user_id = "user-id"
         mock_user_model.rate_limits = (
             RateLimits().get_effective_limits().model_dump_json()
         )
@@ -98,21 +83,25 @@ class TestNilDBEndpoints:
             mock_get_delegation.assert_called_once_with("user-123")
 
     @pytest.mark.asyncio
-    async def test_get_prompt_store_delegation_forbidden_regular_user(
-        self, mock_auth_info_regular_user
+    async def test_get_prompt_store_delegation_success_regular_user(
+        self, mock_auth_info_regular_user, mock_prompt_delegation_token
     ):
-        """Test delegation token request by regular user (not subscription owner)"""
+        """Test delegation token request by regular user (endpoint no longer checks subscription ownership)"""
         from nilai_api.routers.private import get_prompt_store_delegation
 
-        request = "user-123"
+        with patch(
+            "nilai_api.routers.private.get_nildb_delegation_token"
+        ) as mock_get_delegation:
+            mock_get_delegation.return_value = mock_prompt_delegation_token
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_prompt_store_delegation(request, mock_auth_info_regular_user)
+            request = "user-123"
 
-        assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-        assert "Prompt storage is reserved to subscription owners" in str(
-            exc_info.value.detail
-        )
+            result = await get_prompt_store_delegation(
+                request, mock_auth_info_regular_user
+            )
+
+            assert isinstance(result, PromptDelegationToken)
+            assert result.token == "delegation_token_123"
 
     @pytest.mark.asyncio
     async def test_get_prompt_store_delegation_handler_error(
@@ -149,7 +138,7 @@ class TestNilDBEndpoints:
         )
 
         mock_user = MagicMock()
-        mock_user.userid = "test-user-id"
+        mock_user.user_id = "test-user-id"
         mock_user.name = "Test User"
         mock_user.apikey = "test-api-key"
         mock_user.rate_limits = RateLimits().get_effective_limits()
@@ -161,6 +150,14 @@ class TestNilDBEndpoints:
         # Mock metering context
         mock_meter = MagicMock()
         mock_meter.set_response = MagicMock()
+
+        # Mock log context
+        mock_log_ctx = MagicMock()
+        mock_log_ctx.set_user = MagicMock()
+        mock_log_ctx.set_model = MagicMock()
+        mock_log_ctx.set_request_params = MagicMock()
+        mock_log_ctx.start_model_timing = MagicMock()
+        mock_log_ctx.end_model_timing = MagicMock()
 
         request = ChatRequest(
             model="test-model", messages=[{"role": "user", "content": "Hello"}]
@@ -174,12 +171,6 @@ class TestNilDBEndpoints:
             patch(
                 "nilai_api.routers.private.handle_web_search"
             ) as mock_handle_web_search,
-            patch(
-                "nilai_api.routers.private.UserManager.update_token_usage"
-            ) as mock_update_usage,
-            patch(
-                "nilai_api.routers.private.QueryLogManager.log_query"
-            ) as mock_log_query,
         ):
             mock_get_prompt.return_value = "System prompt from nilDB"
 
@@ -196,10 +187,6 @@ class TestNilDBEndpoints:
             mock_web_search_result.messages = request.messages
             mock_web_search_result.sources = []
             mock_handle_web_search.return_value = mock_web_search_result
-
-            # Mock async database operations
-            mock_update_usage.return_value = None
-            mock_log_query.return_value = None
 
             # Mock OpenAI client
             mock_client_instance = MagicMock()
@@ -236,7 +223,10 @@ class TestNilDBEndpoints:
             # But we can test that get_prompt_from_nildb is called
             try:
                 await chat_completion(
-                    req=request, auth_info=mock_auth_info, meter=mock_meter
+                    req=request,
+                    auth_info=mock_auth_info,
+                    meter=mock_meter,
+                    log_ctx=mock_log_ctx,
                 )
             except Exception as e:
                 # Expected to fail due to incomplete mocking, but we should still see the prompt call
@@ -256,9 +246,7 @@ class TestNilDBEndpoints:
         )
 
         mock_user = MagicMock()
-        mock_user.userid = "test-user-id"
-        mock_user.name = "Test User"
-        mock_user.apikey = "test-api-key"
+        mock_user.user_id = "test-user-id"
         mock_user.rate_limits = RateLimits().get_effective_limits()
 
         mock_auth_info = AuthenticationInfo(
@@ -268,6 +256,12 @@ class TestNilDBEndpoints:
         # Mock metering context
         mock_meter = MagicMock()
         mock_meter.set_response = MagicMock()
+
+        # Mock log context
+        mock_log_ctx = MagicMock()
+        mock_log_ctx.set_user = MagicMock()
+        mock_log_ctx.set_model = MagicMock()
+        mock_log_ctx.set_request_params = MagicMock()
 
         request = ChatRequest(
             model="test-model", messages=[{"role": "user", "content": "Hello"}]
@@ -288,7 +282,10 @@ class TestNilDBEndpoints:
 
             with pytest.raises(HTTPException) as exc_info:
                 await chat_completion(
-                    req=request, auth_info=mock_auth_info, meter=mock_meter
+                    req=request,
+                    auth_info=mock_auth_info,
+                    meter=mock_meter,
+                    log_ctx=mock_log_ctx,
                 )
 
             assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
@@ -304,9 +301,7 @@ class TestNilDBEndpoints:
         from nilai_common import ChatRequest
 
         mock_user = MagicMock()
-        mock_user.userid = "test-user-id"
-        mock_user.name = "Test User"
-        mock_user.apikey = "test-api-key"
+        mock_user.user_id = "test-user-id"
         mock_user.rate_limits = RateLimits().get_effective_limits()
 
         mock_auth_info = AuthenticationInfo(
@@ -318,6 +313,14 @@ class TestNilDBEndpoints:
         # Mock metering context
         mock_meter = MagicMock()
         mock_meter.set_response = MagicMock()
+
+        # Mock log context
+        mock_log_ctx = MagicMock()
+        mock_log_ctx.set_user = MagicMock()
+        mock_log_ctx.set_model = MagicMock()
+        mock_log_ctx.set_request_params = MagicMock()
+        mock_log_ctx.start_model_timing = MagicMock()
+        mock_log_ctx.end_model_timing = MagicMock()
 
         request = ChatRequest(
             model="test-model", messages=[{"role": "user", "content": "Hello"}]
@@ -331,12 +334,6 @@ class TestNilDBEndpoints:
             patch(
                 "nilai_api.routers.private.handle_web_search"
             ) as mock_handle_web_search,
-            patch(
-                "nilai_api.routers.private.UserManager.update_token_usage"
-            ) as mock_update_usage,
-            patch(
-                "nilai_api.routers.private.QueryLogManager.log_query"
-            ) as mock_log_query,
         ):
             # Mock state.get_model() to return a ModelEndpoint
             mock_model_endpoint = MagicMock()
@@ -351,10 +348,6 @@ class TestNilDBEndpoints:
             mock_web_search_result.messages = request.messages
             mock_web_search_result.sources = []
             mock_handle_web_search.return_value = mock_web_search_result
-
-            # Mock async database operations
-            mock_update_usage.return_value = None
-            mock_log_query.return_value = None
 
             # Mock OpenAI client
             mock_client_instance = MagicMock()
@@ -388,7 +381,10 @@ class TestNilDBEndpoints:
             # Call the function
             try:
                 await chat_completion(
-                    req=request, auth_info=mock_auth_info, meter=mock_meter
+                    req=request,
+                    auth_info=mock_auth_info,
+                    meter=mock_meter,
+                    log_ctx=mock_log_ctx,
                 )
             except Exception:
                 # Expected to fail due to incomplete mocking
@@ -415,12 +411,10 @@ class TestNilDBEndpoints:
         assert token.token == "delegation_token_123"
         assert token.did == "did:nil:builder123"
 
-    def test_user_is_subscription_owner_property(
-        self, mock_subscription_owner_user, mock_regular_user
-    ):
-        """Test the is_subscription_owner property"""
-        # Subscription owner (userid == apikey)
-        assert mock_subscription_owner_user.is_subscription_owner is True
-
-        # Regular user (userid != apikey)
-        assert mock_regular_user.is_subscription_owner is False
+    def test_user_data_structure(self, mock_subscription_owner_user, mock_regular_user):
+        """Test the UserData structure has required fields"""
+        # Check that UserData has the expected fields
+        assert hasattr(mock_subscription_owner_user, "user_id")
+        assert hasattr(mock_subscription_owner_user, "rate_limits")
+        assert hasattr(mock_regular_user, "user_id")
+        assert hasattr(mock_regular_user, "rate_limits")

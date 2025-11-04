@@ -44,7 +44,7 @@ async def test_concurrent_rate_limit(req):
     rate_limit = RateLimit(concurrent_extractor=lambda _: (5, "test"))
 
     user_limits = UserRateLimits(
-        subscription_holder=random_id(),
+        user_id=random_id(),
         token_rate_limit=None,
         rate_limits=RateLimits(
             user_rate_limit_day=None,
@@ -77,7 +77,7 @@ async def test_concurrent_rate_limit(req):
     "user_limits",
     [
         UserRateLimits(
-            subscription_holder=random_id(),
+            user_id=random_id(),
             token_rate_limit=None,
             rate_limits=RateLimits(
                 user_rate_limit_day=10,
@@ -91,7 +91,7 @@ async def test_concurrent_rate_limit(req):
             ),
         ),
         UserRateLimits(
-            subscription_holder=random_id(),
+            user_id=random_id(),
             token_rate_limit=None,
             rate_limits=RateLimits(
                 user_rate_limit_day=None,
@@ -105,7 +105,7 @@ async def test_concurrent_rate_limit(req):
             ),
         ),
         UserRateLimits(
-            subscription_holder=random_id(),
+            user_id=random_id(),
             token_rate_limit=None,
             rate_limits=RateLimits(
                 user_rate_limit_day=None,
@@ -119,7 +119,7 @@ async def test_concurrent_rate_limit(req):
             ),
         ),
         UserRateLimits(
-            subscription_holder=random_id(),
+            user_id=random_id(),
             token_rate_limit=TokenRateLimits(
                 limits=[
                     TokenRateLimit(
@@ -180,7 +180,7 @@ async def test_web_search_rate_limits(redis_client):
 
     rate_limit = RateLimit(web_search_extractor=web_search_extractor)
     user_limits = UserRateLimits(
-        subscription_holder=apikey,
+        user_id=apikey,
         token_rate_limit=None,
         rate_limits=RateLimits(
             user_rate_limit_day=None,
@@ -212,7 +212,7 @@ async def test_global_web_search_rps_limit(req, redis_client, monkeypatch):
 
     rate_limit = RateLimit(web_search_extractor=lambda _: True)
     user_limits = UserRateLimits(
-        subscription_holder=random_id(),
+        user_id=random_id(),
         token_rate_limit=None,
         rate_limits=RateLimits(
             user_rate_limit_day=None,
@@ -226,20 +226,30 @@ async def test_global_web_search_rps_limit(req, redis_client, monkeypatch):
         ),
     )
 
-    async def run_guarded(i, times, t0):
-        async for _ in rate_limit(req, user_limits):
-            times[i] = asyncio.get_event_loop().time() - t0
-            await asyncio.sleep(0.01)
+    async def run_guarded(i, results, t0):
+        try:
+            async for _ in rate_limit(req, user_limits):
+                results[i] = ("success", asyncio.get_event_loop().time() - t0)
+                await asyncio.sleep(0.01)
+        except HTTPException:
+            results[i] = ("exception", asyncio.get_event_loop().time() - t0)
 
     n = 40
-    times = [0.0] * n
+    results = [None] * n
     t0 = asyncio.get_event_loop().time()
-    tasks = [asyncio.create_task(run_guarded(i, times, t0)) for i in range(n)]
+    tasks = [asyncio.create_task(run_guarded(i, results, t0)) for i in range(n)]
     await asyncio.gather(*tasks)
 
-    within_first_second = [t for t in times if t < 1.0]
-    assert len(within_first_second) <= 20
-    assert max(times) >= 1.0
+    successes = [r for r in results if r is not None and r[0] == "success"]
+    exceptions = [r for r in results if r is not None and r[0] == "exception"]
+
+    # First 20 requests should succeed
+    assert len(successes) == 20
+    # Remaining 20 requests should be rejected
+    assert len(exceptions) == 20
+    # All successes should happen within the first second
+    within_first_second = [r[1] for r in successes if r[1] < 1.0]
+    assert len(within_first_second) == 20
 
 
 @pytest.mark.asyncio
@@ -253,7 +263,7 @@ async def test_queueing_across_seconds(req, redis_client, monkeypatch):
 
     rate_limit = RateLimit(web_search_extractor=lambda _: True)
     user_limits = UserRateLimits(
-        subscription_holder=random_id(),
+        user_id=random_id(),
         token_rate_limit=None,
         rate_limits=RateLimits(
             user_rate_limit_day=None,
@@ -267,18 +277,30 @@ async def test_queueing_across_seconds(req, redis_client, monkeypatch):
         ),
     )
 
-    async def run_guarded(i, times, t0):
-        async for _ in rate_limit(req, user_limits):
-            times[i] = asyncio.get_event_loop().time() - t0
-            await asyncio.sleep(0.01)
+    async def run_guarded(i, results, t0):
+        try:
+            async for _ in rate_limit(req, user_limits):
+                results[i] = ("success", asyncio.get_event_loop().time() - t0)
+                await asyncio.sleep(0.01)
+        except HTTPException:
+            results[i] = ("exception", asyncio.get_event_loop().time() - t0)
 
     n = 25
-    times = [0.0] * n
+    results = [None] * n
     t0 = asyncio.get_event_loop().time()
-    tasks = [asyncio.create_task(run_guarded(i, times, t0)) for i in range(n)]
+    tasks = [asyncio.create_task(run_guarded(i, results, t0)) for i in range(n)]
     await asyncio.gather(*tasks)
 
-    first_window = [t for t in times if t < 1.0]
-    second_window = [t for t in times if 1.0 <= t < 2.0]
+    successes = [r for r in results if r is not None and r[0] == "success"]
+    exceptions = [r for r in results if r is not None and r[0] == "exception"]
+
+    # At least 20 requests should succeed (some may succeed after window resets)
+    assert len(successes) >= 20
+    # At least some requests should be rejected in the first window
+    assert len(exceptions) >= 1
+    # All successes in the first second should be <= 20
+    first_window = [r[1] for r in successes if r[1] < 1.0]
     assert len(first_window) <= 20
-    assert len(second_window) >= 1
+    # Some requests that were rejected should have happened in the first window
+    first_window_exceptions = [r[1] for r in exceptions if r[1] < 1.0]
+    assert len(first_window_exceptions) >= 1

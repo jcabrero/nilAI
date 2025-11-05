@@ -1,35 +1,80 @@
+# Pre-commit hooks for NilAI project
+# See https://pre-commit.com for more information
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+
+default_language_version:
+  python: python3.12
+
 repos:
+  # Standard pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
-      - id: check-toml
-      - id: check-yaml
-      - id: end-of-file-fixer
       - id: trailing-whitespace
+        exclude: |
+          (?x)^(
+            .*\.md$|
+            .*\.snap$
+          )$
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ['--unsafe']  # Allow custom YAML tags
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
 
-  # First repository: Uses Ruff for formatting and linting
+  # Ruff - Python linter and formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.6  # Specifies the version of the Ruff pre-commit hooks to use
+    rev: v0.11.7
     hooks:
-      - id: ruff-format  # Runs Ruff's code formatter
-      - id: ruff  # Runs Ruff's linter
-        exclude: "packages/verifier/"  # Excludes the "packages/verifier/" directory from linting
+      - id: ruff-format
+        name: ruff format
+      - id: ruff
+        name: ruff check
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: "packages/verifier/"
 
-  # Second repository: Pyright for static type checking
+  # Pyright - Type checker (using uv to ensure correct environment)
   - repo: local
     hooks:
       - id: pyright
         name: pyright
-        entry: pyright
+        entry: uv run pyright
         language: system
         types: [python]
-  # Third repository: Local hooks (custom pre-commit checks)
+        pass_filenames: false
+        stages: [commit]
+
+  # Security: Detect secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: |
+          (?x)^(
+            .*\.lock$|
+            .*\.min\.js$|
+            .*\.map$|
+            .*/fixtures/.*|
+            .*/test_data/.*
+          )$
+
+  # Unit tests (fast feedback)
   - repo: local
     hooks:
-      - id: pytest  # Defines a local hook for running pytest
-        name: pytest  # A human-readable name for the hook
-        entry: pytest  # The command to execute
-        language: system  # Uses the system-installed pytest instead of a virtual environment
-        types: [python]  # Applies only to Python files
-        pass_filenames: false  # Run pytest on the entire test suite rather than just changed files
-        args: ["-vvv", "tests/unit"]  # Runs pytest with verbose output and only unit tests
+      - id: pytest-unit
+        name: pytest unit tests
+        entry: uv run pytest
+        language: system
+        types: [python]
+        pass_filenames: false
+        args: ["-v", "--tb=short", "tests/unit"]
+        stages: [push]  # Only on push, not every commit

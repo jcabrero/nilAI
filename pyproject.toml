@@ -21,13 +21,17 @@ dev = [
     "isort>=7.0.0",
     "pytest-mock>=3.14.0",
     "pytest>=8.3.3",
+    "pytest-asyncio>=1.2.0",
+    "pytest-benchmark>=5.1.0",
+    "pytest-cov>=6.0.0",
     "ruff>=0.11.7",
     "uvicorn>=0.32.1",
-    "pytest-asyncio>=1.2.0",
     "testcontainers>=4.13.0",
     "pyright>=1.1.406",
     "pre-commit>=4.1.0",
     "httpx>=0.28.1",
+    "bandit[toml]>=1.8.0",
+    "pip-audit>=2.9.0",
 ]
 
 [build-system]
@@ -50,4 +54,132 @@ nilai-py = { workspace = true }
 exclude = ["**/.venv", "**/.venv/**"]
 
 [tool.ruff]
-exclude = ["**/.venv", "**/.venv/**"]
+# Ruff configuration for NilAI project
+line-length = 100
+target-version = "py312"
+exclude = [
+    "**/.venv",
+    "**/.venv/**",
+    "**/node_modules",
+    "**/__pycache__",
+    ".git",
+    ".pytest_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+# Enable comprehensive rule sets
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "PL",     # pylint
+    "RUF",    # ruff-specific rules
+    "ASYNC",  # flake8-async
+    "S",      # flake8-bandit (security)
+    "T20",    # flake8-print
+    "PT",     # flake8-pytest-style
+    "Q",      # flake8-quotes
+    "RET",    # flake8-return
+    "TCH",    # flake8-type-checking
+]
+
+ignore = [
+    "E501",     # line-too-long (handled by formatter)
+    "PLR0913",  # too-many-arguments (common in FastAPI)
+    "PLR2004",  # magic-value-comparison (common in tests)
+    "S101",     # assert-used (required for pytest)
+    "T201",     # print-found (allowed in scripts)
+    "S104",     # hardcoded-bind-all-interfaces (intentional in dev)
+    "S108",     # hardcoded-temp-file (false positives)
+]
+
+# Allow autofix for all enabled rules (when `--fix` is provided)
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values and print statements
+"tests/**/*.py" = ["PLR2004", "S101", "T201", "PLR0913"]
+# Scripts can use print statements
+"scripts/**/*.py" = ["T201"]
+# Alembic migrations can have specific SQL patterns
+"**/alembic/versions/*.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["nilai_api", "nilai_models", "nilai_common", "nilai_py"]
+force-single-line = false
+force-sort-within-sections = true
+lines-after-imports = 2
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-branches = 15
+max-returns = 6
+max-statements = 50
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+# Use spaces for indentation
+indent-style = "space"
+# Respect magic trailing comma
+skip-magic-trailing-comma = false
+# Auto-detect line ending
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+# Pytest configuration
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: marks tests that require GPU (deselect with '-m \"not gpu\"')",
+    "integration: marks tests as integration tests",
+    "e2e: marks tests as end-to-end tests",
+]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+    "--disable-warnings",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["nilai_api", "nilai_models", "nilai_common", "nilai_py"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/.venv/*",
+    "*/alembic/versions/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+]

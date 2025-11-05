@@ -2,6 +2,7 @@ import asyncio
 
 import pytest
 import pytest_asyncio
+
 from nilai_common.api_model import ModelEndpoint, ModelMetadata
 from nilai_common.discovery import ModelServiceDiscovery
 
@@ -43,9 +44,7 @@ async def test_register_model(model_service_discovery, model_endpoint):
     assert key == f"/models/{model_endpoint.metadata.id}"
 
     # Verify we can retrieve it
-    retrieved_model = await model_service_discovery.get_model(
-        model_endpoint.metadata.id
-    )
+    retrieved_model = await model_service_discovery.get_model(model_endpoint.metadata.id)
     assert retrieved_model is not None
     assert retrieved_model.metadata.id == model_endpoint.metadata.id
     assert retrieved_model.url == model_endpoint.url
@@ -113,9 +112,7 @@ async def test_discover_models_with_filters(model_service_discovery):
     assert model_endpoint_1.metadata.id in discovered_models
 
     # Filter by feature
-    discovered_models = await model_service_discovery.discover_models(
-        feature="text_generation"
-    )
+    discovered_models = await model_service_discovery.discover_models(feature="text_generation")
     assert len(discovered_models) == 1
     assert model_endpoint_2.metadata.id in discovered_models
 
@@ -181,9 +178,7 @@ async def test_keep_alive(model_service_discovery, model_endpoint):
     key = await short_ttl_discovery.register_model(model_endpoint)
 
     # Start keep_alive task
-    keep_alive_task = asyncio.create_task(
-        short_ttl_discovery.keep_alive(key, model_endpoint)
-    )
+    keep_alive_task = asyncio.create_task(short_ttl_discovery.keep_alive(key, model_endpoint))
 
     # Wait for more than one TTL period
     await asyncio.sleep(3)

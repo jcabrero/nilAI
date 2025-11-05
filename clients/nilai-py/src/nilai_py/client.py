@@ -1,30 +1,25 @@
+import asyncio
+import base64
+import datetime
 import json
 import os
-import openai
-from typing_extensions import override
-from typing import List, Optional
+from typing import override
 
-
-import base64
 import httpx
-import asyncio
-import datetime
-
-
+from nuc.builder import NucTokenBuilder
 from nuc.envelope import NucTokenEnvelope
 from nuc.token import Did, InvocationBody
-from nuc.builder import NucTokenBuilder
-from nilai_py.nildb import NilDBPromptManager
+import openai
 
+from nilai_py.common import is_expired, new_root_token
+from nilai_py.nildb import NilDBPromptManager
 from nilai_py.niltypes import (
+    AuthType,
     DelegationTokenRequest,
     DelegationTokenResponse,
     NilAuthPrivateKey,
     NilAuthPublicKey,
-    AuthType,
 )
-
-from nilai_py.common import is_expired, new_root_token
 
 
 class Client(openai.Client):
@@ -46,16 +41,14 @@ class Client(openai.Client):
         # Retrieve the public key from the nilai server
         try:
             self.nilai_public_key = self._get_nilai_public_key()
-            print(
-                "Retrieved nilai public key:", self.nilai_public_key.serialize().hex()
-            )
+            print("Retrieved nilai public key:", self.nilai_public_key.serialize().hex())
         except Exception as e:
             print(f"Failed to retrieve the nilai public key: {e}")
             raise e
 
     def _api_key_init(self, *args, **kwargs):
         # Initialize the nilauth private key with the subscription
-        self.api_key: str | None = kwargs.get("api_key", None)  # pyright: ignore[reportIncompatibleVariableOverride]
+        self.api_key: str | None = kwargs.get("api_key")  # pyright: ignore[reportIncompatibleVariableOverride]
         if self.api_key is None:
             raise ValueError("In API key mode, api_key is required")
 
@@ -63,11 +56,11 @@ class Client(openai.Client):
             bytes.fromhex(self.api_key)
         )
         # Initialize the root token envelope
-        self._root_token_envelope: Optional[NucTokenEnvelope] = None
+        self._root_token_envelope: NucTokenEnvelope | None = None
 
     def _delegation_token_init(self, *args, **kwargs):
         # Generate a new private key for the client
-        api_key = kwargs.get("api_key", None)
+        api_key = kwargs.get("api_key")
         if api_key is not None:
             self.nilauth_private_key = NilAuthPrivateKey(bytes.fromhex(api_key))
         else:
@@ -106,9 +99,7 @@ class Client(openai.Client):
                 raise RuntimeError(
                     f"Failed to retrieve the nilai public key: {public_key_response.text}"
                 )
-            return NilAuthPublicKey(
-                base64.b64decode(public_key_response.text), raw=True
-            )
+            return NilAuthPublicKey(base64.b64decode(public_key_response.text), raw=True)
         except Exception as e:
             raise RuntimeError(f"Failed to retrieve the nilai public key: {e}")
 
@@ -131,9 +122,7 @@ class Client(openai.Client):
         """
         Update the delegation token for the client.
         """
-        self.delegation_token = NucTokenEnvelope.parse(
-            delegation_token_response.delegation_token
-        )
+        self.delegation_token = NucTokenEnvelope.parse(delegation_token_response.delegation_token)
 
     def _get_invocation_token(self) -> str:
         """
@@ -155,9 +144,7 @@ class Client(openai.Client):
         Get the invocation token for the client with delegation.
         """
         if self.auth_type != AuthType.DELEGATION_TOKEN:
-            raise RuntimeError(
-                "Invocation token is only available through API key mode only"
-            )
+            raise RuntimeError("Invocation token is only available through API key mode only")
 
         invocation_token: str = (
             NucTokenBuilder.extending(self.delegation_token)
@@ -198,7 +185,7 @@ class Client(openai.Client):
     def list_prompts_from_nildb(self) -> None:
         return asyncio.run(self.async_list_prompts_from_nildb())
 
-    async def async_store_prompt_to_nildb(self, prompt: str, dir: str) -> List[str]:
+    async def async_store_prompt_to_nildb(self, prompt: str, dir: str) -> list[str]:
         prompt_manager = await NilDBPromptManager.init(nilai_url=str(self.base_url))
 
         invocation_token = self._get_invocation_token()
@@ -233,5 +220,5 @@ class Client(openai.Client):
 
         return document_ids
 
-    def store_prompt_to_nildb(self, prompt: str, dir="./stored_prompts") -> List[str]:
+    def store_prompt_to_nildb(self, prompt: str, dir="./stored_prompts") -> list[str]:
         return asyncio.run(self.async_store_prompt_to_nildb(prompt, dir=dir))

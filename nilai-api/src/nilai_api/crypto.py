@@ -1,8 +1,9 @@
-import os
-import fcntl
 from base64 import b64encode
+import fcntl
+import os
 
 from secp256k1 import PrivateKey, PublicKey
+
 
 PRIVATE_KEY_PATH = "private_key.key"
 

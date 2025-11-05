@@ -6,10 +6,10 @@ This script takes a release tag (like 'v1.0.0' or '1.0.0') and updates
 the version field in pyproject.toml accordingly.
 """
 
-import re
-import sys
 import argparse
 from pathlib import Path
+import re
+import sys
 
 
 def normalize_version(tag_version):
@@ -53,9 +53,8 @@ def validate_version(version):
     if re.match(pattern, version):
         print(f"Version {version} is valid")
         return True
-    else:
-        print(f"Warning: Version {version} may not be PEP 440 compliant")
-        return False
+    print(f"Warning: Version {version} may not be PEP 440 compliant")
+    return False
 
 
 def update_pyproject_version(new_version, pyproject_path="pyproject.toml"):
@@ -102,15 +101,9 @@ def main():
     parser = argparse.ArgumentParser(
         description="Update pyproject.toml version from GitHub release tag"
     )
-    parser.add_argument(
-        "tag_version", help="The release tag version (e.g., 'v1.0.0' or '1.0.0')"
-    )
-    parser.add_argument(
-        "--pyproject", default="pyproject.toml", help="Path to pyproject.toml file"
-    )
-    parser.add_argument(
-        "--validate", action="store_true", help="Validate version format"
-    )
+    parser.add_argument("tag_version", help="The release tag version (e.g., 'v1.0.0' or '1.0.0')")
+    parser.add_argument("--pyproject", default="pyproject.toml", help="Path to pyproject.toml file")
+    parser.add_argument("--validate", action="store_true", help="Validate version format")
 
     args = parser.parse_args()
 

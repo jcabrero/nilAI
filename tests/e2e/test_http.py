@@ -10,15 +10,15 @@ pytest tests/e2e/test_http.py
 
 import json
 
-
-from .config import BASE_URL, ENVIRONMENT, test_models, AUTH_STRATEGY, api_key_getter
-from .nuc import (
-    get_rate_limited_nuc_token,
-    get_invalid_rate_limited_nuc_token,
-    get_document_id_nuc_token,
-)
 import httpx
 import pytest
+
+from .config import AUTH_STRATEGY, BASE_URL, ENVIRONMENT, api_key_getter, test_models
+from .nuc import (
+    get_document_id_nuc_token,
+    get_invalid_rate_limited_nuc_token,
+    get_rate_limited_nuc_token,
+)
 
 
 @pytest.fixture
@@ -112,9 +112,7 @@ def test_health_endpoint(client):
 def test_models_endpoint(client):
     """Test the models endpoint"""
     response = client.get("/models")
-    assert response.status_code == 200, (
-        f"Models endpoint should return 200 OK: {response.json()}"
-    )
+    assert response.status_code == 200, f"Models endpoint should return 200 OK: {response.json()}"
     assert isinstance(response.json(), list), "Models should be returned as a list"
 
     # Check for specific models mentioned in the requests
@@ -157,15 +155,9 @@ def test_attestation_endpoint(client):
     # Basic attestation report validation
     report = response.json()
     assert isinstance(report, dict), "Attestation report should be a dictionary"
-    assert "cpu_attestation" in report, (
-        "Attestation report should contain a 'cpu_attestation' key"
-    )
-    assert "gpu_attestation" in report, (
-        "Attestation report should contain a 'gpu_attestation' key"
-    )
-    assert "verifying_key" in report, (
-        "Attestation report should contain a 'verifying_key' key"
-    )
+    assert "cpu_attestation" in report, "Attestation report should contain a 'cpu_attestation' key"
+    assert "gpu_attestation" in report, "Attestation report should contain a 'gpu_attestation' key"
+    assert "verifying_key" in report, "Attestation report should contain a 'verifying_key' key"
 
 
 @pytest.mark.parametrize(
@@ -209,18 +201,12 @@ def test_model_standard_request(client, model):
     assert content.strip(), f"Empty response returned for {model}"
 
     # Check that the usage is not 0
-    assert response_json["usage"]["prompt_tokens"] > 0, (
-        f"Prompt tokens are 0 for {model}"
-    )
-    assert response_json["usage"]["completion_tokens"] > 0, (
-        f"Completion tokens are 0 for {model}"
-    )
+    assert response_json["usage"]["prompt_tokens"] > 0, f"Prompt tokens are 0 for {model}"
+    assert response_json["usage"]["completion_tokens"] > 0, f"Completion tokens are 0 for {model}"
     assert response_json["usage"]["total_tokens"] > 0, f"Total tokens are 0 for {model}"
     # Log response for debugging
     print(
-        f"\nModel {model} standard response: {content[:100]}..."
-        if len(content) > 100
-        else content
+        f"\nModel {model} standard response: {content[:100]}..." if len(content) > 100 else content
     )
 
 
@@ -265,18 +251,12 @@ def test_model_standard_request_nillion_2025(nillion_2025_client, model):
     assert content.strip(), f"Empty response returned for {model}"
 
     # Check that the usage is not 0
-    assert response_json["usage"]["prompt_tokens"] > 0, (
-        f"Prompt tokens are 0 for {model}"
-    )
-    assert response_json["usage"]["completion_tokens"] > 0, (
-        f"Completion tokens are 0 for {model}"
-    )
+    assert response_json["usage"]["prompt_tokens"] > 0, f"Prompt tokens are 0 for {model}"
+    assert response_json["usage"]["completion_tokens"] > 0, f"Completion tokens are 0 for {model}"
     assert response_json["usage"]["total_tokens"] > 0, f"Total tokens are 0 for {model}"
     # Log response for debugging
     print(
-        f"\nModel {model} standard response: {content[:100]}..."
-        if len(content) > 100
-        else content
+        f"\nModel {model} standard response: {content[:100]}..." if len(content) > 100 else content
     )
 
 
@@ -305,9 +285,7 @@ def test_model_streaming_request(client, model):
         )
 
         # Check that we're getting a stream
-        assert response.headers.get("Transfer-Encoding") == "chunked", (
-            "Response should be streamed"
-        )
+        assert response.headers.get("Transfer-Encoding") == "chunked", "Response should be streamed"
 
         # Read a few chunks to verify streaming works
         chunk_count = 0
@@ -317,9 +295,7 @@ def test_model_streaming_request(client, model):
             if chunk and chunk.strip() and chunk.startswith("data:"):
                 chunk_count += 1
                 chunk = chunk[6:]  # Remove the data: prefix
-                print(
-                    f"\nModel {model} stream chunk {chunk_count}: [{type(chunk)}] {chunk}"
-                )
+                print(f"\nModel {model} stream chunk {chunk_count}: [{type(chunk)}] {chunk}")
                 chunk_json = json.loads(chunk)
                 # Check for content in the chunk
                 if (
@@ -384,9 +360,7 @@ def test_model_tools_request(client, model):
 
         response_json = response.json()
         assert "choices" in response_json, "Response should contain choices"
-        assert len(response_json["choices"]) > 0, (
-            "At least one choice should be present"
-        )
+        assert len(response_json["choices"]) > 0, "At least one choice should be present"
 
         message = response_json["choices"][0].get("message", {})
 
@@ -403,9 +377,7 @@ def test_model_tools_request(client, model):
             assert first_call["function"]["name"] == "get_weather", (
                 "Function name should be get_weather"
             )
-            assert "arguments" in first_call["function"], (
-                "Function should have arguments"
-            )
+            assert "arguments" in first_call["function"], "Function should have arguments"
 
             # Parse arguments and check for location
             args = json.loads(first_call["function"]["arguments"])
@@ -422,7 +394,7 @@ def test_model_tools_request(client, model):
             assert content, f"No content or tool calls returned for {model}"
     except Exception as e:
         # Some models might not support tools, so we'll just log the error
-        print(f"\nError testing tools with {model}: {str(e)}")
+        print(f"\nError testing tools with {model}: {e!s}")
         # Re-raise if it's an assertion error
         raise e
 
@@ -483,7 +455,7 @@ def test_function_calling_with_streaming_httpx(client, model):
                 choices = chunk_json.get("choices", [])
                 if choices and isinstance(choices, list) and len(choices) > 0:
                     delta = choices[0].get("delta", {})
-                    if "tool_calls" in delta and delta["tool_calls"]:
+                    if delta.get("tool_calls"):
                         had_tool_call = True
                 if chunk_json.get("usage"):
                     had_usage = True
@@ -526,18 +498,14 @@ def test_rate_limiting(client):
 
     # Check for potential rate limit responses
     rate_limit_statuses = [429, 403, 503]
-    rate_limited_responses = [
-        r for r in responses if r.status_code in rate_limit_statuses
-    ]
+    rate_limited_responses = [r for r in responses if r.status_code in rate_limit_statuses]
 
     # If rate limiting is expected, at least some requests should be rate-limited
     if len(rate_limited_responses) == 0:
         pytest.skip("No rate limiting detected. Manual review may be needed.")
 
 
-@pytest.mark.skipif(
-    AUTH_STRATEGY != "nuc", reason="NUC rate limiting not used with API key"
-)
+@pytest.mark.skipif(AUTH_STRATEGY != "nuc", reason="NUC rate limiting not used with API key")
 def test_rate_limiting_nucs(rate_limited_client):
     """Test rate limiting by sending multiple rapid requests"""
     # Payload for repeated requests
@@ -554,13 +522,9 @@ def test_rate_limiting_nucs(rate_limited_client):
 
     # Check for potential rate limit responses
     rate_limit_statuses = [429, 403, 503]
-    rate_limited_responses = [
-        r for r in responses if r.status_code in rate_limit_statuses
-    ]
+    rate_limited_responses = [r for r in responses if r.status_code in rate_limit_statuses]
 
-    assert len(rate_limited_responses) > 0, (
-        "No NUC rate limiting detected, when expected"
-    )
+    assert len(rate_limited_responses) > 0, "No NUC rate limiting detected, when expected"
 
 
 def test_large_payload_handling(client):
@@ -589,9 +553,7 @@ def test_large_payload_handling(client):
     if response.status_code == 200:
         response_json = response.json()
         assert "choices" in response_json, "Response should contain choices"
-        assert len(response_json["choices"]) > 0, (
-            "At least one choice should be present"
-        )
+        assert len(response_json["choices"]) > 0, "At least one choice should be present"
 
 
 @pytest.mark.parametrize("invalid_model", ["nonexistent-model/v1", "", None, "   "])
@@ -675,9 +637,7 @@ def test_chat_completion_invalid_temperature(client):
     }
     response = client.post("/chat/completions", json=payload)
     print(response)
-    assert response.status_code == 400, (
-        "Invalid temperature type should return a 422 error"
-    )
+    assert response.status_code == 400, "Invalid temperature type should return a 422 error"
 
 
 def test_chat_completion_missing_model(client):
@@ -687,9 +647,7 @@ def test_chat_completion_missing_model(client):
         "temperature": 0.2,
     }
     response = client.post("/chat/completions", json=payload)
-    assert response.status_code == 400, (
-        "Missing model should return a 422 validation error"
-    )
+    assert response.status_code == 400, "Missing model should return a 422 validation error"
 
 
 def test_chat_completion_negative_max_tokens(client):
@@ -701,9 +659,7 @@ def test_chat_completion_negative_max_tokens(client):
         "max_tokens": -10,
     }
     response = client.post("/chat/completions", json=payload)
-    assert response.status_code == 400, (
-        "Negative max_tokens should return a 422 validation error"
-    )
+    assert response.status_code == 400, "Negative max_tokens should return a 422 validation error"
 
 
 def test_chat_completion_high_temperature(client):
@@ -721,9 +677,7 @@ def test_chat_completion_high_temperature(client):
         "max_tokens": 50,
     }
     response = client.post("/chat/completions", json=payload)
-    assert response.status_code == 200, (
-        "High temperature request should return a valid response"
-    )
+    assert response.status_code == 200, "High temperature request should return a valid response"
     response_json = response.json()
     assert "choices" in response_json, "Response should contain choices"
     assert len(response_json["choices"]) > 0, "At least one choice should be present"
@@ -752,31 +706,26 @@ def test_model_streaming_request_high_token(client):
         for line in response.iter_lines():
             if line and line.strip() and line.startswith("data:"):
                 chunk_count += 1
-        assert chunk_count > 0, (
-            "Should receive at least one chunk for high token streaming request"
-        )
+        assert chunk_count > 0, "Should receive at least one chunk for high token streaming request"
 
 
-@pytest.mark.skipif(
-    AUTH_STRATEGY != "nuc", reason="NUC required for this tests on nilDB"
-)
+@pytest.mark.skipif(AUTH_STRATEGY != "nuc", reason="NUC required for this tests on nilDB")
 def test_nildb_delegation(client: httpx.Client):
     """Tests getting a delegation token for nilDB and validating that token to be valid"""
-    from secretvaults.common.keypair import Keypair
     from nuc.envelope import NucTokenEnvelope
-    from nuc.validate import NucTokenValidator, ValidationParameters
     from nuc.nilauth import NilauthClient
-    from nilai_api.config import CONFIG
     from nuc.token import Did
+    from nuc.validate import NucTokenValidator, ValidationParameters
+    from secretvaults.common.keypair import Keypair
+
+    from nilai_api.config import CONFIG
 
     keypair = Keypair.generate()
     did = keypair.to_did_string()
 
     response = client.get("/delegation", params={"prompt_delegation_request": did})
 
-    assert response.status_code == 200, (
-        f"Delegation token should be returned: {response.text}"
-    )
+    assert response.status_code == 200, f"Delegation token should be returned: {response.text}"
     assert "token" in response.json(), "Delegation token should be returned"
     assert "did" in response.json(), "Delegation did should be returned"
     token = response.json()["token"]
@@ -798,9 +747,7 @@ def test_nildb_delegation(client: httpx.Client):
     "model",
     test_models,
 )
-@pytest.mark.skipif(
-    AUTH_STRATEGY != "nuc", reason="NUC required for this tests on nilDB"
-)
+@pytest.mark.skipif(AUTH_STRATEGY != "nuc", reason="NUC required for this tests on nilDB")
 def test_nildb_prompt_document(document_id_client: httpx.Client, model):
     """Tests getting a prompt document from nilDB and executing a chat completion with it"""
     pytest.skip(
@@ -820,9 +767,7 @@ def test_nildb_prompt_document(document_id_client: httpx.Client, model):
 
     response = document_id_client.post("/chat/completions", json=payload, timeout=30)
 
-    assert response.status_code == 200, (
-        f"Response should be successful: {response.text}"
-    )
+    assert response.status_code == 200, f"Response should be successful: {response.text}"
     # Response must talk about cheese which is what the prompt document contains
     message: str = response.json()["choices"][0].get("message", {}).get("content", None)
     assert "cheese" in message.lower(), "Response should contain cheese"

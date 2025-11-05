@@ -9,14 +9,16 @@ pytest tests/e2e/test_openai.py
 """
 
 import json
+
 import httpx
-import pytest
 from openai import OpenAI
 from openai.types.chat import ChatCompletion
-from .config import BASE_URL, ENVIRONMENT, test_models, AUTH_STRATEGY, api_key_getter
+import pytest
+
+from .config import AUTH_STRATEGY, BASE_URL, ENVIRONMENT, api_key_getter, test_models
 from .nuc import (
-    get_rate_limited_nuc_token,
     get_invalid_rate_limited_nuc_token,
+    get_rate_limited_nuc_token,
 )
 
 
@@ -74,30 +76,20 @@ def test_chat_completion(client, model):
         )
 
         # Verify response structure
-        assert isinstance(response, ChatCompletion), (
-            "Response should be a ChatCompletion object"
-        )
+        assert isinstance(response, ChatCompletion), "Response should be a ChatCompletion object"
         assert response.model == model, f"Response model should be {model}"
         assert len(response.choices) > 0, "Response should contain at least one choice"
 
         # Check content
         content = response.choices[0].message.content
         assert content, f"No content returned for {model}"
-        print(
-            f"\nModel {model} response: {content[:100]}..."
-            if len(content) > 100
-            else content
-        )
+        print(f"\nModel {model} response: {content[:100]}..." if len(content) > 100 else content)
 
         assert response.usage, f"No usage data returned for {model}"
         print(f"Model {model} usage: {response.usage}")
 
-        assert response.usage.prompt_tokens > 0, (
-            f"No prompt tokens returned for {model}"
-        )
-        assert response.usage.completion_tokens > 0, (
-            f"No completion tokens returned for {model}"
-        )
+        assert response.usage.prompt_tokens > 0, f"No prompt tokens returned for {model}"
+        assert response.usage.completion_tokens > 0, f"No completion tokens returned for {model}"
         assert response.usage.total_tokens > 0, f"No total tokens returned for {model}"
 
         # Check for Paris in the response
@@ -106,16 +98,14 @@ def test_chat_completion(client, model):
         )
 
     except Exception as e:
-        pytest.fail(f"Error testing chat completion with {model}: {str(e)}")
+        pytest.fail(f"Error testing chat completion with {model}: {e!s}")
 
 
 @pytest.mark.parametrize(
     "model",
     test_models,
 )
-@pytest.mark.skipif(
-    AUTH_STRATEGY != "nuc", reason="NUC rate limiting not used with API key"
-)
+@pytest.mark.skipif(AUTH_STRATEGY != "nuc", reason="NUC rate limiting not used with API key")
 def test_rate_limiting_nucs(rate_limited_client, model):
     """Test rate limiting by sending multiple rapid requests"""
     import openai
@@ -190,7 +180,7 @@ def test_streaming_chat_completion(client, model):
         )
 
     except Exception as e:
-        pytest.fail(f"Error testing streaming chat completion with {model}: {str(e)}")
+        pytest.fail(f"Error testing streaming chat completion with {model}: {e!s}")
 
 
 @pytest.mark.parametrize(
@@ -237,9 +227,7 @@ def test_function_calling(client, model):
         )
 
         # Verify response structure
-        assert isinstance(response, ChatCompletion), (
-            "Response should be a ChatCompletion object"
-        )
+        assert isinstance(response, ChatCompletion), "Response should be a ChatCompletion object"
         assert len(response.choices) > 0, "Response should contain at least one choice"
 
         message = response.choices[0].message
@@ -325,7 +313,7 @@ def test_function_calling(client, model):
             assert content, f"No content or tool calls returned for {model}"
 
     except Exception as e:
-        pytest.fail(f"Error testing function calling with {model}: {str(e)}")
+        pytest.fail(f"Error testing function calling with {model}: {e!s}")
 
 
 @pytest.mark.parametrize(
@@ -389,7 +377,7 @@ def test_function_calling_with_streaming(client, model):
         assert had_usage, f"No usage data received for {model} streaming request"
 
     except Exception as e:
-        pytest.fail(f"Error testing function calling with {model}: {str(e)}")
+        pytest.fail(f"Error testing function calling with {model}: {e!s}")
 
 
 def test_usage_endpoint(client):
@@ -428,7 +416,7 @@ def test_usage_endpoint(client):
         print(f"\nUsage data: {json.dumps(usage_data, indent=2)}")
 
     except Exception as e:
-        pytest.fail(f"Error testing usage endpoint: {str(e)}")
+        pytest.fail(f"Error testing usage endpoint: {e!s}")
 
 
 @pytest.mark.skipif(
@@ -466,7 +454,7 @@ def test_attestation_endpoint(client):
         print(f"\nAttestation report received with keys: {list(report.keys())}")
 
     except Exception as e:
-        pytest.fail(f"Error testing attestation endpoint: {str(e)}")
+        pytest.fail(f"Error testing attestation endpoint: {e!s}")
 
 
 def test_health_endpoint(client):
@@ -495,7 +483,7 @@ def test_health_endpoint(client):
         print(f"\nHealth status: {health_data.get('status')}")
 
     except Exception as e:
-        pytest.fail(f"Error testing health endpoint: {str(e)}")
+        pytest.fail(f"Error testing health endpoint: {e!s}")
 
 
 @pytest.mark.parametrize("invalid_model", ["nonexistent-model/v1", "", None, "   "])
@@ -509,9 +497,7 @@ def test_invalid_model_handling(client, invalid_model):
         pytest.fail(f"Invalid model {invalid_model} should raise an error")
     except Exception as e:
         # The OpenAI client will raise an exception for invalid models
-        assert True, (
-            f"Invalid model {invalid_model} raised an error as expected: {str(e)}"
-        )
+        assert True, f"Invalid model {invalid_model} raised an error as expected: {e!s}"
 
 
 def test_timeout_handling(client):
@@ -545,7 +531,7 @@ def test_empty_messages_handling(client):
         pytest.fail("Empty messages should raise an error")
     except Exception as e:
         # The OpenAI client will raise an exception for empty messages
-        assert True, f"Empty messages raised an error as expected: {str(e)}"
+        assert True, f"Empty messages raised an error as expected: {e!s}"
 
 
 def test_unsupported_parameters(client):
@@ -561,7 +547,7 @@ def test_unsupported_parameters(client):
         assert response, "Request with unsupported parameters should still work"
     except Exception as e:
         # Some unsupported parameters might cause errors, which is also acceptable
-        assert True, f"Unsupported parameters handled as expected: {str(e)}"
+        assert True, f"Unsupported parameters handled as expected: {e!s}"
 
 
 def test_chat_completion_invalid_temperature(client):
@@ -575,7 +561,7 @@ def test_chat_completion_invalid_temperature(client):
         pytest.fail("Invalid temperature type should raise an error")
     except Exception as e:
         # The OpenAI client will raise an exception for invalid temperature
-        assert True, f"Invalid temperature raised an error as expected: {str(e)}"
+        assert True, f"Invalid temperature raised an error as expected: {e!s}"
 
 
 def test_chat_completion_missing_model(client):
@@ -588,7 +574,7 @@ def test_chat_completion_missing_model(client):
         pytest.fail("Missing model should raise an error")
     except Exception as e:
         # The OpenAI client will raise an exception for missing model
-        assert True, f"Missing model raised an error as expected: {str(e)}"
+        assert True, f"Missing model raised an error as expected: {e!s}"
 
 
 def test_chat_completion_negative_max_tokens(client):
@@ -603,7 +589,7 @@ def test_chat_completion_negative_max_tokens(client):
         pytest.fail("Negative max_tokens should raise an error")
     except Exception as e:
         # The OpenAI client will raise an exception for negative max_tokens
-        assert True, f"Negative max_tokens raised an error as expected: {str(e)}"
+        assert True, f"Negative max_tokens raised an error as expected: {e!s}"
 
 
 def test_chat_completion_high_temperature(client):
@@ -648,9 +634,7 @@ def test_model_streaming_request_high_token(client):
             assert chunk.choices[0].delta.content, "Chunk should contain content"
         if chunk_count >= 20:  # Limit processing to avoid long tests
             break
-    assert chunk_count > 0, (
-        "Should receive at least one chunk for high token streaming request"
-    )
+    assert chunk_count > 0, "Should receive at least one chunk for high token streaming request"
 
 
 @pytest.mark.parametrize(
@@ -660,6 +644,7 @@ def test_model_streaming_request_high_token(client):
 def test_web_search(client, model):
     """Test web_search functionality with proper source validation."""
     import time
+
     import openai
 
     max_retries = 5
@@ -690,9 +675,7 @@ def test_web_search(client, model):
                 "Response should be a ChatCompletion object"
             )
             assert response.model == model, f"Response model should be {model}"
-            assert len(response.choices) > 0, (
-                "Response should contain at least one choice"
-            )
+            assert len(response.choices) > 0, "Response should contain at least one choice"
 
             content = response.choices[0].message.content
             assert content, "Response should contain content"
@@ -719,10 +702,11 @@ def test_web_search(client, model):
 
 def test_web_search_brave_rps_e2e(client):
     """Test that web search requests are rate limited to 20 per second globally for the Brave API."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     import threading
     import time
+
     import openai
-    from concurrent.futures import ThreadPoolExecutor, as_completed
 
     # Use a barrier to ensure all requests start simultaneously
     request_barrier = threading.Barrier(40)
@@ -765,9 +749,7 @@ def test_web_search_brave_rps_e2e(client):
     assert len(responses) == 40, "All requests should complete"
 
     successful_responses = [(t, r) for t, r, status in responses if status == "success"]
-    rate_limited_responses = [
-        (t, r) for t, r, status in responses if status == "rate_limited"
-    ]
+    rate_limited_responses = [(t, r) for t, r, status in responses if status == "rate_limited"]
     error_responses = [(t, r) for t, r, status in responses if status == "error"]
 
     print(
@@ -781,13 +763,9 @@ def test_web_search_brave_rps_e2e(client):
     )
 
     for t, response in successful_responses:
-        assert isinstance(response, ChatCompletion), (
-            "Response should be a ChatCompletion object"
-        )
+        assert isinstance(response, ChatCompletion), "Response should be a ChatCompletion object"
         sources = getattr(response, "sources", None)
-        assert sources is not None, (
-            "Successful web search responses should have sources"
-        )
+        assert sources is not None, "Successful web search responses should have sources"
         assert isinstance(sources, list), "Sources should be a list"
         assert len(sources) > 0, "Sources should not be empty"
 
@@ -799,10 +777,11 @@ def test_web_search_brave_rps_e2e(client):
 
 def test_web_search_queueing_next_second_e2e(client):
     """Test that web search requests are properly queued and processed in batches."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     import threading
     import time
+
     import openai
-    from concurrent.futures import ThreadPoolExecutor, as_completed
 
     request_barrier = threading.Barrier(25)
     responses = []
@@ -845,9 +824,7 @@ def test_web_search_queueing_next_second_e2e(client):
 
     # Categorize responses
     successful_responses = [(t, r) for t, r, status in responses if status == "success"]
-    rate_limited_responses = [
-        (t, r) for t, r, status in responses if status == "rate_limited"
-    ]
+    rate_limited_responses = [(t, r) for t, r, status in responses if status == "rate_limited"]
     error_responses = [(t, r) for t, r, status in responses if status == "error"]
 
     print(
@@ -861,9 +838,7 @@ def test_web_search_queueing_next_second_e2e(client):
     )
 
     for t, response in successful_responses:
-        assert isinstance(response, ChatCompletion), (
-            "Response should be a ChatCompletion object"
-        )
+        assert isinstance(response, ChatCompletion), "Response should be a ChatCompletion object"
         assert len(response.choices) > 0, "Response should contain at least one choice"
         assert response.choices[0].message.content, "Response should contain content"
 

@@ -1,10 +1,12 @@
-from datetime import datetime, timedelta, timezone
-from functools import lru_cache
-from typing import Optional, List
-from nuc.envelope import NucTokenEnvelope
+from datetime import UTC, datetime, timedelta
 from enum import Enum
+from functools import lru_cache
 import logging
+from typing import Optional
+
+from nuc.envelope import NucTokenEnvelope
 from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger(__name__)
 
@@ -12,15 +14,13 @@ logger = logging.getLogger(__name__)
 class TokenRateLimit(BaseModel):
     signature: str
     expires_at: datetime
-    usage_limit: Optional[int]
+    usage_limit: int | None
 
     @property
     def ms_remaining(self) -> int:
         if self.expires_at is None:
             return 0  # Or handle as infinite, e.g., float('inf'), or raise error
-        return int(
-            (self.expires_at - datetime.now(timezone.utc)).total_seconds() * 1000
-        )
+        return int((self.expires_at - datetime.now(UTC)).total_seconds() * 1000)
 
 
 class UsageLimitKind(Enum):
@@ -44,7 +44,7 @@ def is_reduction_of(base: int, reduced: int) -> bool:
 
 
 class TokenRateLimits(BaseModel):
-    limits: List[TokenRateLimit] = Field(default_factory=list, min_length=1)
+    limits: list[TokenRateLimit] = Field(default_factory=list, min_length=1)
 
     @property
     def last(self) -> TokenRateLimit:
@@ -52,7 +52,7 @@ class TokenRateLimits(BaseModel):
             raise ValueError("No limits found")
         return self.limits[-1]
 
-    def get_limit(self, signature: str) -> Optional[TokenRateLimit]:
+    def get_limit(self, signature: str) -> TokenRateLimit | None:
         for limit in self.limits:
             if limit.signature == signature:
                 return limit
@@ -124,7 +124,7 @@ class TokenRateLimits(BaseModel):
                 expires_at = (
                     proof.token.expires_at
                     if proof.token.expires_at is not None
-                    else datetime.now(timezone.utc) - timedelta(days=1)
+                    else datetime.now(UTC) - timedelta(days=1)
                 )  # Set to a past date to indicate that the token is expired and invalid
                 usage_limits.append(
                     TokenRateLimit(

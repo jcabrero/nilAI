@@ -6,18 +6,19 @@ Create Date: 2025-02-06 10:57:42.966226
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
+
 from nilai_api.config import CONFIG
 
 
 # revision identifiers, used by Alembic.
 revision: str = "da89d3230653"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -30,9 +31,7 @@ def upgrade() -> None:
         sa.Column("prompt_tokens", sa.Integer, default=0, nullable=False),
         sa.Column("completion_tokens", sa.Integer, default=0, nullable=False),
         sa.Column("queries", sa.Integer, default=0, nullable=False),
-        sa.Column(
-            "signup_date", sa.DateTime, server_default=sa.func.now(), nullable=False
-        ),
+        sa.Column("signup_date", sa.DateTime, server_default=sa.func.now(), nullable=False),
         sa.Column("last_activity", sa.DateTime, nullable=True),
         sa.Column(
             "ratelimit_day",
@@ -63,9 +62,7 @@ def upgrade() -> None:
             nullable=False,
             index=True,
         ),
-        sa.Column(
-            "query_timestamp", sa.DateTime, server_default=sa.func.now(), nullable=False
-        ),
+        sa.Column("query_timestamp", sa.DateTime, server_default=sa.func.now(), nullable=False),
         sa.Column("model", sa.Text, nullable=False),
         sa.Column("prompt_tokens", sa.Integer, nullable=False),
         sa.Column("completion_tokens", sa.Integer, nullable=False),

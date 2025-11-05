@@ -1,17 +1,17 @@
 import asyncio
-
-from dotenv import load_dotenv
 from logging.config import fileConfig
 
+from alembic import context
+from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from alembic import context
-from nilai_api.db import Base
-from nilai_api.db.users import UserModel
-from nilai_api.db.logs import QueryLog
 from nilai_api.config import CONFIG as nilai_config
+from nilai_api.db import Base
+from nilai_api.db.logs import QueryLog
+from nilai_api.db.users import UserModel
+
 
 # If we don't use the models, they remain unused, and the migration fails
 # This is a workaround to ensure the models are loaded

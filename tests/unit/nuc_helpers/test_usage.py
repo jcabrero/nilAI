@@ -1,13 +1,14 @@
+from datetime import UTC, datetime, timedelta
 import unittest
 from unittest.mock import patch
+
 from nilai_api.auth.nuc_helpers.usage import (
     TokenRateLimits,
     UsageLimitError,
     UsageLimitKind,
 )
-from ..nuc_helpers import DummyDecodedNucToken, DummyNucTokenEnvelope
 
-from datetime import datetime, timedelta, timezone
+from ..nuc_helpers import DummyDecodedNucToken, DummyNucTokenEnvelope
 
 
 class GetUsageLimitTests(unittest.TestCase):
@@ -17,9 +18,7 @@ class GetUsageLimitTests(unittest.TestCase):
 
     @patch("nuc.envelope.NucTokenEnvelope.parse")
     def test_no_usage_limit_returns_none(self, mock_parse):
-        env = DummyNucTokenEnvelope(
-            proofs=[DummyDecodedNucToken(), DummyDecodedNucToken()]
-        )
+        env = DummyNucTokenEnvelope(proofs=[DummyDecodedNucToken(), DummyDecodedNucToken()])
         mock_parse.return_value = env
 
         limits = TokenRateLimits.from_token("dummy_token")
@@ -45,9 +44,7 @@ class GetUsageLimitTests(unittest.TestCase):
                 DummyDecodedNucToken(
                     {"usage_limit": 50}
                 ),  # This is a first reduction of the base usage limit
-                DummyDecodedNucToken(
-                    {"usage_limit": 100}
-                ),  # This is the base usage limit
+                DummyDecodedNucToken({"usage_limit": 100}),  # This is the base usage limit
             ]
         )
         mock_parse.return_value = env
@@ -68,9 +65,7 @@ class GetUsageLimitTests(unittest.TestCase):
                 DummyDecodedNucToken(
                     {"usage_limit": None}
                 ),  # This is a first reduction of the base usage limit
-                DummyDecodedNucToken(
-                    {"usage_limit": 100}
-                ),  # This is the base usage limit
+                DummyDecodedNucToken({"usage_limit": 100}),  # This is the base usage limit
             ]
         )
         mock_parse.return_value = env
@@ -91,9 +86,7 @@ class GetUsageLimitTests(unittest.TestCase):
         token_rate_limits = TokenRateLimits.from_token("dummy_token")
         if token_rate_limits is None:
             self.fail("Limits should not be None")
-        limits_reversed_without_none = [
-            limit for limit in limits[::-1] if limit is not None
-        ]
+        limits_reversed_without_none = [limit for limit in limits[::-1] if limit is not None]
         for effective_limit, expected_limit in zip(
             token_rate_limits.limits, limits_reversed_without_none
         ):
@@ -110,9 +103,7 @@ class GetUsageLimitTests(unittest.TestCase):
         token_rate_limits = TokenRateLimits.from_token("dummy_token")
         if token_rate_limits is None:
             self.fail("Limits should not be None")
-        limits_reversed_without_none = [
-            limit for limit in limits[::-1] if limit is not None
-        ]
+        limits_reversed_without_none = [limit for limit in limits[::-1] if limit is not None]
         for effective_limit, expected_limit in zip(
             token_rate_limits.limits, limits_reversed_without_none
         ):
@@ -246,7 +237,7 @@ class GetUsageLimitTests(unittest.TestCase):
         expires_at = limits.last.expires_at
 
         # Check expires_at is less than 1 day from now
-        self.assertLess(expires_at, datetime.now(timezone.utc) + timedelta(days=1))  # type: ignore
+        self.assertLess(expires_at, datetime.now(UTC) + timedelta(days=1))  # type: ignore
 
 
 if __name__ == "__main__":

@@ -4,10 +4,11 @@ Integration tests for user database operations.
 These tests use a real PostgreSQL database via testcontainers.
 """
 
-import pytest
 import json
 
-from nilai_api.db.users import UserManager, RateLimits
+import pytest
+
+from nilai_api.db.users import RateLimits, UserManager
 
 
 class TestUserManagerIntegration:
@@ -97,8 +98,9 @@ class TestUserManagerIntegration:
         )
 
         # Update the user with new rate limits using direct model update
-        from nilai_api.db import get_db_session
         import sqlalchemy as sa
+
+        from nilai_api.db import get_db_session
 
         async with get_db_session() as session:
             # Update rate_limits JSON column directly
@@ -151,8 +153,9 @@ class TestUserManagerIntegration:
         assert retrieved_user.rate_limits == partial_rate_limits.model_dump()
 
         # Test partial JSON update using PostgreSQL JSON operations
-        from nilai_api.db import get_db_session
         import sqlalchemy as sa
+
+        from nilai_api.db import get_db_session
 
         async with get_db_session() as session:
             # Update only specific fields in the JSON
@@ -195,13 +198,12 @@ class TestUserManagerIntegration:
         )
 
         # DELETE: Set rate_limits to NULL
-        from nilai_api.db import get_db_session
         import sqlalchemy as sa
 
+        from nilai_api.db import get_db_session
+
         async with get_db_session() as session:
-            stmt = sa.text(
-                "UPDATE users SET rate_limits = NULL WHERE user_id = :user_id"
-            )
+            stmt = sa.text("UPDATE users SET rate_limits = NULL WHERE user_id = :user_id")
             await session.execute(stmt, {"user_id": user.user_id})
             await session.commit()
 
@@ -220,12 +222,8 @@ class TestUserManagerIntegration:
         async with get_db_session() as session:
             # First set some data
             new_data = {"user_rate_limit_day": 500, "web_search_rate_limit_day": 25}
-            stmt = sa.text(
-                "UPDATE users SET rate_limits = :data WHERE user_id = :user_id"
-            )
-            await session.execute(
-                stmt, {"data": json.dumps(new_data), "user_id": user.user_id}
-            )
+            stmt = sa.text("UPDATE users SET rate_limits = :data WHERE user_id = :user_id")
+            await session.execute(stmt, {"data": json.dumps(new_data), "user_id": user.user_id})
             await session.commit()
 
         # Verify data was set
@@ -255,8 +253,9 @@ class TestUserManagerIntegration:
         # Create user with rate limits to test conversion edge cases
         user = await UserManager.insert_user("JSON Validation User")
 
-        from nilai_api.db import get_db_session
         import sqlalchemy as sa
+
+        from nilai_api.db import get_db_session
 
         # Test storing various JSON data types
         test_cases = [
@@ -274,9 +273,7 @@ class TestUserManagerIntegration:
 
         for i, test_data in enumerate(test_cases):
             async with get_db_session() as session:
-                stmt = sa.text(
-                    "UPDATE users SET rate_limits = :data WHERE user_id = :user_id"
-                )
+                stmt = sa.text("UPDATE users SET rate_limits = :data WHERE user_id = :user_id")
                 await session.execute(
                     stmt, {"data": json.dumps(test_data), "user_id": user.user_id}
                 )
@@ -296,12 +293,8 @@ class TestUserManagerIntegration:
                 assert rate_limits_obj.user_rate_limit_day == 1000
                 assert rate_limits_obj.web_search_rate_limit_hour == 50
             elif i == 1:  # String numbers
-                assert (
-                    rate_limits_obj.user_rate_limit_day == 2000
-                )  # Should convert string to int
-                assert (
-                    rate_limits_obj.user_rate_limit == 15
-                )  # Should convert string to int
+                assert rate_limits_obj.user_rate_limit_day == 2000  # Should convert string to int
+                assert rate_limits_obj.user_rate_limit == 15  # Should convert string to int
             elif i == 2:  # Mixed valid/invalid
                 assert rate_limits_obj.user_rate_limit_day == 3000
                 assert rate_limits_obj.web_search_rate_limit == 25
@@ -309,9 +302,7 @@ class TestUserManagerIntegration:
 
         # Test empty JSON object
         async with get_db_session() as session:
-            stmt = sa.text(
-                "UPDATE users SET rate_limits = '{}' WHERE user_id = :user_id"
-            )
+            stmt = sa.text("UPDATE users SET rate_limits = '{}' WHERE user_id = :user_id")
             await session.execute(stmt, {"user_id": user.user_id})
             await session.commit()
 
@@ -326,9 +317,7 @@ class TestUserManagerIntegration:
         try:
             async with get_db_session() as session:
                 # This should work as PostgreSQL JSONB validates JSON
-                stmt = sa.text(
-                    "UPDATE users SET rate_limits = :data WHERE user_id = :user_id"
-                )
+                stmt = sa.text("UPDATE users SET rate_limits = :data WHERE user_id = :user_id")
                 await session.execute(
                     stmt,
                     {
@@ -384,9 +373,7 @@ class TestUserManagerIntegration:
         )
 
         # Step 4: Update the user's rate limits using the new function
-        update_success = await UserManager.update_rate_limits(
-            user.user_id, new_rate_limits
-        )
+        update_success = await UserManager.update_rate_limits(user.user_id, new_rate_limits)
         assert update_success is True
 
         # Step 5: Retrieve user again and verify rate limits were updated
@@ -432,7 +419,5 @@ class TestUserManagerIntegration:
 
         # Step 9: Test error case - update non-existent user
         fake_user_id = "non-existent-user-id"
-        error_update = await UserManager.update_rate_limits(
-            fake_user_id, new_rate_limits
-        )
+        error_update = await UserManager.update_rate_limits(fake_user_id, new_rate_limits)
         assert error_update is False

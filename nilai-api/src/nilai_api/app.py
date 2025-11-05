@@ -1,14 +1,16 @@
 # Fast API and serving
 
 
-from prometheus_fastapi_instrumentator import Instrumentator
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
+
+from nilai_api import config
 from nilai_api.auth import get_auth_info
 from nilai_api.rate_limiting import setup_redis_conn
 from nilai_api.routers import private, public
-from nilai_api import config
-from contextlib import asynccontextmanager
-from fastapi.middleware.cors import CORSMiddleware
 from nilai_common.config import SETTINGS
 
 

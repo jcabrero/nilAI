@@ -1,14 +1,16 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from secretvaults.common.types import Uuid
+
+from nilai_api.auth.common import PromptDocument
+from nilai_api.handlers.nildb.api_model import PromptDelegationToken
 from nilai_api.handlers.nildb.handler import (
-    get_nildb_delegation_token,
-    get_prompt_from_nildb,
     create_builder_client,
     create_user_client,
+    get_nildb_delegation_token,
+    get_prompt_from_nildb,
 )
-from nilai_api.handlers.nildb.api_model import PromptDelegationToken
-from nilai_api.auth.common import PromptDocument
-from secretvaults.common.types import Uuid
 
 
 class TestNilDBHandler:
@@ -31,9 +33,7 @@ class TestNilDBHandler:
     @pytest.fixture
     def mock_prompt_document(self):
         """Mock PromptDocument for tests"""
-        return PromptDocument(
-            document_id="test-document-123", owner_did="did:nil:" + "1" * 66
-        )
+        return PromptDocument(document_id="test-document-123", owner_did="did:nil:" + "1" * 66)
 
     @pytest.fixture
     def mock_keypair(self):
@@ -69,9 +69,7 @@ class TestNilDBHandler:
     async def test_create_builder_client(self, mock_config):
         """Test creating builder client"""
         with (
-            patch(
-                "secretvaults.common.keypair.Keypair.from_hex"
-            ) as mock_keypair_from_hex,
+            patch("secretvaults.common.keypair.Keypair.from_hex") as mock_keypair_from_hex,
             patch(
                 "nilai_api.handlers.nildb.handler.SecretVaultBuilderClient.from_options"
             ) as mock_from_options,
@@ -87,9 +85,7 @@ class TestNilDBHandler:
 
             result = await create_builder_client()
 
-            mock_keypair_from_hex.assert_called_once_with(
-                mock_config.nildb.builder_private_key
-            )
+            mock_keypair_from_hex.assert_called_once_with(mock_config.nildb.builder_private_key)
             mock_from_options.assert_called_once()
             mock_client.refresh_root_token.assert_called_once()
             assert result == mock_client
@@ -98,9 +94,7 @@ class TestNilDBHandler:
     async def test_create_user_client(self, mock_config):
         """Test creating user client"""
         with (
-            patch(
-                "secretvaults.common.keypair.Keypair.from_hex"
-            ) as mock_keypair_from_hex,
+            patch("secretvaults.common.keypair.Keypair.from_hex") as mock_keypair_from_hex,
             patch(
                 "nilai_api.handlers.nildb.handler.SecretVaultUserClient.from_options"
             ) as mock_from_options,
@@ -115,16 +109,12 @@ class TestNilDBHandler:
 
             result = await create_user_client()
 
-            mock_keypair_from_hex.assert_called_once_with(
-                mock_config.nildb.builder_private_key
-            )
+            mock_keypair_from_hex.assert_called_once_with(mock_config.nildb.builder_private_key)
             mock_from_options.assert_called_once()
             assert result == mock_client
 
     @pytest.mark.asyncio
-    async def test_get_nildb_delegation_token_success(
-        self, mock_config, mock_builder_client
-    ):
+    async def test_get_nildb_delegation_token_success(self, mock_config, mock_builder_client):
         """Test successful delegation token generation"""
         user_did = f"did:nil:{'1' * 66}"
 
@@ -133,17 +123,13 @@ class TestNilDBHandler:
                 "nilai_api.handlers.nildb.handler.create_builder_client",
                 new_callable=AsyncMock,
             ) as mock_create_builder,
-            patch(
-                "nilai_api.handlers.nildb.handler.into_seconds_from_now"
-            ) as mock_into_seconds,
+            patch("nilai_api.handlers.nildb.handler.into_seconds_from_now") as mock_into_seconds,
         ):
             mock_create_builder.return_value = mock_builder_client
             mock_into_seconds.return_value = 1234567890
 
             # Mock the entire NucTokenBuilder class to return a string for the chain
-            with patch(
-                "nilai_api.handlers.nildb.handler.NucTokenBuilder"
-            ) as mock_token_builder:
+            with patch("nilai_api.handlers.nildb.handler.NucTokenBuilder") as mock_token_builder:
                 mock_builder_chain = MagicMock()
                 mock_builder_chain.command.return_value = mock_builder_chain
                 mock_builder_chain.audience.return_value = mock_builder_chain
@@ -220,9 +206,7 @@ class TestNilDBHandler:
             mock_create_user.return_value = mock_user_client
             mock_user_client.read_data.return_value = None
 
-            with pytest.raises(
-                ValueError, match="Couldn't get document response from nilDB nodes"
-            ):
+            with pytest.raises(ValueError, match="Couldn't get document response from nilDB nodes"):
                 await get_prompt_from_nildb(mock_prompt_document)
 
     @pytest.mark.asyncio

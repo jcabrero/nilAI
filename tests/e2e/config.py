@@ -1,5 +1,7 @@
-from .nuc import get_nuc_client
 from nilai_api.config import CONFIG
+
+from .nuc import get_nuc_client
+
 
 ENVIRONMENT = CONFIG.environment.environment
 # Left for API key for backwards compatibility
@@ -18,12 +20,11 @@ match AUTH_STRATEGY:
 def api_key_getter() -> str:
     if AUTH_STRATEGY == "nuc":
         return get_nuc_client()._get_invocation_token()
-    elif AUTH_STRATEGY == "api_key":
+    if AUTH_STRATEGY == "api_key":
         if AUTH_TOKEN is None:
             raise ValueError("Expected AUTH_TOKEN to be set")
         return AUTH_TOKEN
-    else:
-        raise ValueError(f"Invalid AUTH_STRATEGY: {AUTH_STRATEGY}")
+    raise ValueError(f"Invalid AUTH_STRATEGY: {AUTH_STRATEGY}")
 
 
 print(f"USING {AUTH_STRATEGY}")
@@ -44,7 +45,5 @@ models = {
 
 if ENVIRONMENT not in models:
     ENVIRONMENT = "ci"
-    print(
-        f"Environment {ENVIRONMENT} not found in models, using {ENVIRONMENT} as default"
-    )
+    print(f"Environment {ENVIRONMENT} not found in models, using {ENVIRONMENT} as default")
 test_models = models[ENVIRONMENT]

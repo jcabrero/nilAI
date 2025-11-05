@@ -1,18 +1,19 @@
 import json
-from typing import Any, Dict, cast
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
-
-import pytest
 
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_message_tool_call import (
     ChatCompletionMessageToolCall,
+)
+from openai.types.chat.chat_completion_message_tool_call import (
     Function as ChatToolFunction,
 )
+import pytest
 
-from nilai_common import MessageAdapter, Usage, ChatRequest
 from nilai_api.handlers.tools import tool_router
+from nilai_common import ChatRequest, MessageAdapter, Usage
 
 
 @pytest.mark.asyncio
@@ -41,7 +42,7 @@ async def test_route_and_execute_tool_call_invokes_code_execution(mocker):
     assert tool_msg["role"] == "tool"
     # Cast to a plain dict to access optional fields not present
     # on the strict ChatCompletionToolMessageParam TypedDict
-    tool_msg_dict = cast(Dict[str, Any], tool_msg)
+    tool_msg_dict = cast("dict[str, Any]", tool_msg)
     assert tool_msg_dict["name"] == "execute_python"
     assert tool_msg_dict["tool_call_id"] == "call_123"
     assert tool_msg_dict["content"] == "42"
@@ -149,12 +150,9 @@ async def test_handle_tool_workflow_executes_and_uses_result(mocker):
     # Aggregated usage is the sum of both calls
     assert first_response.usage is not None
     assert final_completion.usage is not None
-    expected_prompt = (
-        first_response.usage.prompt_tokens + final_completion.usage.prompt_tokens
-    )
+    expected_prompt = first_response.usage.prompt_tokens + final_completion.usage.prompt_tokens
     expected_completion = (
-        first_response.usage.completion_tokens
-        + final_completion.usage.completion_tokens
+        first_response.usage.completion_tokens + final_completion.usage.completion_tokens
     )
     assert prompt_tokens == expected_prompt
     assert completion_tokens == expected_completion

@@ -1,13 +1,14 @@
 from openai.types.chat.chat_completion import ChoiceLogprobs
 
 from nilai_common import (
-    SignedChatCompletion,
-    ModelEndpoint,
-    ModelMetadata,
-    Usage,
     Choice,
     MessageAdapter,
+    ModelEndpoint,
+    ModelMetadata,
+    SignedChatCompletion,
+    Usage,
 )
+
 
 model_metadata: ModelMetadata = ModelMetadata(
     id="ABC",  # Unique identifier
@@ -21,9 +22,7 @@ model_metadata: ModelMetadata = ModelMetadata(
     tool_support=False,  # Whether the model supports tools
 )
 
-model_endpoint: ModelEndpoint = ModelEndpoint(
-    url="http://test-model-url", metadata=model_metadata
-)
+model_endpoint: ModelEndpoint = ModelEndpoint(url="http://test-model-url", metadata=model_metadata)
 
 response: SignedChatCompletion = SignedChatCompletion(
     id="test-id",

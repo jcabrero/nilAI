@@ -1,14 +1,15 @@
 """Configuration module for nilai-common."""
 
-from .host import HostSettings, SETTINGS, to_bool
-from .model import ModelSettings, ModelCapabilities, MODEL_SETTINGS, MODEL_CAPABILITIES
+from .host import SETTINGS, HostSettings, to_bool
+from .model import MODEL_CAPABILITIES, MODEL_SETTINGS, ModelCapabilities, ModelSettings
+
 
 __all__ = [
-    "HostSettings",
-    "ModelSettings",
-    "ModelCapabilities",
-    "SETTINGS",
-    "MODEL_SETTINGS",
     "MODEL_CAPABILITIES",
+    "MODEL_SETTINGS",
+    "SETTINGS",
+    "HostSettings",
+    "ModelCapabilities",
+    "ModelSettings",
     "to_bool",
 ]

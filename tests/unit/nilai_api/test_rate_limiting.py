@@ -1,15 +1,15 @@
 import asyncio
-import string
+from datetime import UTC, datetime, timedelta
 import random
+import string
 from unittest.mock import MagicMock
-from datetime import datetime, timedelta, timezone
+
+from fastapi import HTTPException, Request
+import pytest
+import pytest_asyncio
 
 from nilai_api.auth import TokenRateLimit, TokenRateLimits
 from nilai_api.db.users import RateLimits
-import pytest
-import pytest_asyncio
-from fastapi import HTTPException, Request
-
 from nilai_api.rate_limiting import RateLimit, UserRateLimits, setup_redis_conn
 
 
@@ -125,7 +125,7 @@ async def test_concurrent_rate_limit(req):
                     TokenRateLimit(
                         signature=random_id(),
                         usage_limit=11,
-                        expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+                        expires_at=datetime.now(UTC) + timedelta(minutes=5),
                     )
                 ]
             ),

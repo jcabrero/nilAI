@@ -1,11 +1,11 @@
-import os
 import json
+import os
 import re
 
 import httpx
 import pytest
 
-from .config import BASE_URL, test_models, api_key_getter
+from .config import BASE_URL, api_key_getter, test_models
 
 
 # Skip entire module if sandbox key not present
@@ -89,7 +89,7 @@ def test_execute_python_sha256_e2e(client, model):
             continue
         data = response.json()
         last_data = data
-        if not ("choices" in data and data["choices"]):
+        if not (data.get("choices")):
             continue
         message = data["choices"][0].get("message", {})
         content = message.get("content") or ""
@@ -99,11 +99,11 @@ def test_execute_python_sha256_e2e(client, model):
             break
     else:
         pytest.fail(
-            (
+
                 "Expected exact SHA-256 hash not found after retries.\n"
                 f"Last status: {last_status}\n"
                 f"Got: {last_content[:200]}...\n"
                 f"Expected: {expected}\n"
                 f"Full: {json.dumps(last_data, indent=2)[:1000] if last_data else '<no json>'}"
-            )
+
         )

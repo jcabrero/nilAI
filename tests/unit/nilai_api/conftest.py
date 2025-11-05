@@ -1,6 +1,8 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from testcontainers.redis import RedisContainer
+
 from nilai_api.config import CONFIG
 
 

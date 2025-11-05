@@ -1,12 +1,13 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 import logging
 from unittest.mock import MagicMock
 
-from nilai_api.db.users import RateLimits
-import pytest
 from fastapi.security import HTTPAuthorizationCredentials
+import pytest
 
 from nilai_api.config import CONFIG as config
+from nilai_api.db.users import RateLimits
+
 
 # For these tests, we will use the api_key strategy
 config.auth.auth_strategy = "api_key"
@@ -29,8 +30,8 @@ def mock_user_model():
     mock.prompt_tokens = 0
     mock.completion_tokens = 0
     mock.queries = 0
-    mock.signup_date = datetime.now(timezone.utc)
-    mock.last_activity = datetime.now(timezone.utc)
+    mock.signup_date = datetime.now(UTC)
+    mock.last_activity = datetime.now(UTC)
     mock.rate_limits = RateLimits().get_effective_limits().model_dump_json()
     mock.rate_limits_obj = RateLimits().get_effective_limits()
     return mock
@@ -50,9 +51,7 @@ async def test_get_auth_info_valid_token(mock_validate_credential, mock_user_mod
 
     """Test get_auth_info with a valid token."""
     mock_validate_credential.return_value = mock_user_model
-    credentials = HTTPAuthorizationCredentials(
-        scheme="Bearer", credentials="valid-token"
-    )
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid-token")
 
     auth_info = await get_auth_info(credentials)
     print(auth_info)
@@ -69,9 +68,7 @@ async def test_get_auth_info_invalid_token(mock_validate_credential):
 
     """Test get_auth_info with an invalid token."""
     mock_validate_credential.side_effect = AuthenticationError("Credential not found")
-    credentials = HTTPAuthorizationCredentials(
-        scheme="Bearer", credentials="invalid-token"
-    )
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="invalid-token")
     with pytest.raises(AuthenticationError) as exc_info:
         auth_infor = await get_auth_info(credentials)
         print(auth_infor)

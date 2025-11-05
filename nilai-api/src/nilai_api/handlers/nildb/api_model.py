@@ -1,5 +1,7 @@
-from pydantic import BaseModel, ConfigDict
 from typing import TypeAlias
+
+from pydantic import BaseModel, ConfigDict
+
 
 PromptDelegationRequest: TypeAlias = str
 

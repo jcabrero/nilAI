@@ -5,6 +5,7 @@ import logging
 
 from e2b_code_interpreter import Sandbox
 
+
 logger = logging.getLogger(__name__)
 
 

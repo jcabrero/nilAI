@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
 from nilai_api.state import AppState
 
 
@@ -21,12 +22,7 @@ def test_semaphore_initialization(app_state):
 
 def test_uptime(app_state):
     uptime = app_state.uptime
-    assert (
-        "days" in uptime
-        or "hours" in uptime
-        or "minutes" in uptime
-        or "seconds" in uptime
-    )
+    assert "days" in uptime or "hours" in uptime or "minutes" in uptime or "seconds" in uptime
 
 
 @pytest.mark.asyncio

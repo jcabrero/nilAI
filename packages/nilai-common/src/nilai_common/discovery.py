@@ -1,12 +1,13 @@
 import asyncio
-import logging
 from asyncio import CancelledError
-from datetime import datetime, timezone
-from typing import Dict, Optional
+from datetime import UTC, datetime
+import logging
 
 import redis.asyncio as redis
-from nilai_common.api_model import ModelEndpoint, ModelMetadata
 from tenacity import retry, stop_after_attempt, wait_exponential
+
+from nilai_common.api_model import ModelEndpoint, ModelMetadata
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,8 +26,8 @@ class ModelServiceDiscovery:
         self.host = host
         self.port = port
         self.lease_ttl = lease_ttl
-        self._client: Optional[redis.Redis] = None
-        self._model_key: Optional[str] = None
+        self._client: redis.Redis | None = None
+        self._model_key: str | None = None
 
         self.is_healthy = True
         self.last_refresh = None
@@ -39,9 +40,7 @@ class ModelServiceDiscovery:
         Initialize the Redis client.
         """
         if self._client is None:
-            self._client = await redis.Redis(
-                host=self.host, port=self.port, decode_responses=True
-            )
+            self._client = await redis.Redis(host=self.host, port=self.port, decode_responses=True)
 
     @property
     async def client(self) -> redis.Redis:
@@ -55,9 +54,7 @@ class ModelServiceDiscovery:
             raise ValueError("Redis client must be initialized")
         return self._client
 
-    async def register_model(
-        self, model_endpoint: ModelEndpoint, prefix: str = "/models"
-    ) -> str:
+    async def register_model(self, model_endpoint: ModelEndpoint, prefix: str = "/models") -> str:
         """
         Register a model endpoint in Redis.
 
@@ -80,10 +77,10 @@ class ModelServiceDiscovery:
 
     async def discover_models(
         self,
-        name: Optional[str] = None,
-        feature: Optional[str] = None,
-        prefix: Optional[str] = "/models",
-    ) -> Dict[str, ModelEndpoint]:
+        name: str | None = None,
+        feature: str | None = None,
+        prefix: str | None = "/models",
+    ) -> dict[str, ModelEndpoint]:
         """
         Discover models based on optional filters.
 
@@ -94,14 +91,12 @@ class ModelServiceDiscovery:
         """
 
         # Get all model keys using SCAN pattern
-        discovered_models: Dict[str, ModelEndpoint] = {}
+        discovered_models: dict[str, ModelEndpoint] = {}
         pattern = f"{prefix}/*"
 
         cursor = 0
         while True:
-            cursor, keys = await (await self.client).scan(
-                cursor=cursor, match=pattern, count=100
-            )
+            cursor, keys = await (await self.client).scan(cursor=cursor, match=pattern, count=100)
 
             for key in keys:
                 try:
@@ -110,17 +105,10 @@ class ModelServiceDiscovery:
                         model_endpoint = ModelEndpoint.model_validate_json(value)
 
                         # Apply filters if provided
-                        if (
-                            name
-                            and name.lower() not in model_endpoint.metadata.name.lower()
-                        ):
+                        if name and name.lower() not in model_endpoint.metadata.name.lower():
                             continue
 
-                        if (
-                            feature
-                            and feature
-                            not in model_endpoint.metadata.supported_features
-                        ):
+                        if feature and feature not in model_endpoint.metadata.supported_features:
                             continue
 
                         discovered_models[model_endpoint.metadata.id] = model_endpoint
@@ -132,9 +120,7 @@ class ModelServiceDiscovery:
 
         return discovered_models
 
-    async def get_model(
-        self, model_id: str, prefix: str = "/models"
-    ) -> Optional[ModelEndpoint]:
+    async def get_model(self, model_id: str, prefix: str = "/models") -> ModelEndpoint | None:
         """
         Get a model endpoint by ID.
 
@@ -163,17 +149,15 @@ class ModelServiceDiscovery:
         key = f"{prefix}/{model_id}"
         await (await self.client).delete(key)
 
-    @retry(
-        wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(3)
-    )
+    @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(3))
     async def _refresh_ttl(self, key: str, model_json: str):
         """Refresh the TTL for a Redis key."""
         await (await self.client).setex(key, self.lease_ttl, model_json)
-        self.last_refresh = datetime.now(timezone.utc)
+        self.last_refresh = datetime.now(UTC)
         self.is_healthy = True
 
     async def keep_alive(
-        self, key: Optional[str] = None, model_endpoint: Optional[ModelEndpoint] = None
+        self, key: str | None = None, model_endpoint: ModelEndpoint | None = None
     ):
         """Keep the model registration alive by refreshing TTL with graceful shutdown."""
         if model_endpoint is None and self._model_key is None:

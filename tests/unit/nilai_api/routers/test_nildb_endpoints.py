@@ -1,6 +1,7 @@
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from fastapi import HTTPException, status
+import pytest
 
 from nilai_api.auth.common import AuthenticationInfo, PromptDocument
 from nilai_api.db.users import RateLimits, UserData, UserModel
@@ -17,9 +18,7 @@ class TestNilDBEndpoints:
         """Mock user data for subscription owner"""
         mock_user_model = MagicMock(spec=UserModel)
         mock_user_model.user_id = "owner-id"
-        mock_user_model.rate_limits = (
-            RateLimits().get_effective_limits().model_dump_json()
-        )
+        mock_user_model.rate_limits = RateLimits().get_effective_limits().model_dump_json()
         mock_user_model.rate_limits_obj = RateLimits().get_effective_limits()
 
         return UserData.from_sqlalchemy(mock_user_model)
@@ -29,9 +28,7 @@ class TestNilDBEndpoints:
         """Mock user data for regular user (not subscription owner)"""
         mock_user_model = MagicMock(spec=UserModel)
         mock_user_model.user_id = "user-id"
-        mock_user_model.rate_limits = (
-            RateLimits().get_effective_limits().model_dump_json()
-        )
+        mock_user_model.rate_limits = RateLimits().get_effective_limits().model_dump_json()
         mock_user_model.rate_limits_obj = RateLimits().get_effective_limits()
 
         return UserData.from_sqlalchemy(mock_user_model)
@@ -55,9 +52,7 @@ class TestNilDBEndpoints:
     @pytest.fixture
     def mock_prompt_delegation_token(self):
         """Mock PromptDelegationToken"""
-        return PromptDelegationToken(
-            token="delegation_token_123", did="did:nil:builder123"
-        )
+        return PromptDelegationToken(token="delegation_token_123", did="did:nil:builder123")
 
     @pytest.mark.asyncio
     async def test_get_prompt_store_delegation_success(
@@ -66,16 +61,12 @@ class TestNilDBEndpoints:
         """Test successful delegation token request"""
         from nilai_api.routers.private import get_prompt_store_delegation
 
-        with patch(
-            "nilai_api.routers.private.get_nildb_delegation_token"
-        ) as mock_get_delegation:
+        with patch("nilai_api.routers.private.get_nildb_delegation_token") as mock_get_delegation:
             mock_get_delegation.return_value = mock_prompt_delegation_token
 
             request = "user-123"
 
-            result = await get_prompt_store_delegation(
-                request, mock_auth_info_subscription_owner
-            )
+            result = await get_prompt_store_delegation(request, mock_auth_info_subscription_owner)
 
             assert isinstance(result, PromptDelegationToken)
             assert result.token == "delegation_token_123"
@@ -89,16 +80,12 @@ class TestNilDBEndpoints:
         """Test delegation token request by regular user (endpoint no longer checks subscription ownership)"""
         from nilai_api.routers.private import get_prompt_store_delegation
 
-        with patch(
-            "nilai_api.routers.private.get_nildb_delegation_token"
-        ) as mock_get_delegation:
+        with patch("nilai_api.routers.private.get_nildb_delegation_token") as mock_get_delegation:
             mock_get_delegation.return_value = mock_prompt_delegation_token
 
             request = "user-123"
 
-            result = await get_prompt_store_delegation(
-                request, mock_auth_info_regular_user
-            )
+            result = await get_prompt_store_delegation(request, mock_auth_info_regular_user)
 
             assert isinstance(result, PromptDelegationToken)
             assert result.token == "delegation_token_123"
@@ -110,17 +97,13 @@ class TestNilDBEndpoints:
         """Test delegation token request when handler raises an exception"""
         from nilai_api.routers.private import get_prompt_store_delegation
 
-        with patch(
-            "nilai_api.routers.private.get_nildb_delegation_token"
-        ) as mock_get_delegation:
+        with patch("nilai_api.routers.private.get_nildb_delegation_token") as mock_get_delegation:
             mock_get_delegation.side_effect = Exception("Handler failed")
 
             request = "user-123"
 
             with pytest.raises(HTTPException) as exc_info:
-                await get_prompt_store_delegation(
-                    request, mock_auth_info_subscription_owner
-                )
+                await get_prompt_store_delegation(request, mock_auth_info_subscription_owner)
 
             assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
             assert "Server unable to produce delegation tokens: Handler failed" in str(
@@ -159,18 +142,14 @@ class TestNilDBEndpoints:
         mock_log_ctx.start_model_timing = MagicMock()
         mock_log_ctx.end_model_timing = MagicMock()
 
-        request = ChatRequest(
-            model="test-model", messages=[{"role": "user", "content": "Hello"}]
-        )
+        request = ChatRequest(model="test-model", messages=[{"role": "user", "content": "Hello"}])
 
         with (
             patch("nilai_api.routers.private.get_prompt_from_nildb") as mock_get_prompt,
             patch("nilai_api.routers.private.AsyncOpenAI") as mock_openai_client,
             patch("nilai_api.routers.private.state.get_model") as mock_get_model,
             patch("nilai_api.routers.private.handle_nilrag") as mock_handle_nilrag,
-            patch(
-                "nilai_api.routers.private.handle_web_search"
-            ) as mock_handle_web_search,
+            patch("nilai_api.routers.private.handle_web_search") as mock_handle_web_search,
         ):
             mock_get_prompt.return_value = "System prompt from nilDB"
 
@@ -211,9 +190,7 @@ class TestNilDBEndpoints:
                 },
             }
             # Make the create method itself an AsyncMock that returns the response
-            mock_client_instance.chat.completions.create = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client_instance.chat.completions.create = AsyncMock(return_value=mock_response)
             mock_client_instance.close = AsyncMock()
             mock_openai_client.return_value = mock_client_instance
 
@@ -263,9 +240,7 @@ class TestNilDBEndpoints:
         mock_log_ctx.set_model = MagicMock()
         mock_log_ctx.set_request_params = MagicMock()
 
-        request = ChatRequest(
-            model="test-model", messages=[{"role": "user", "content": "Hello"}]
-        )
+        request = ChatRequest(model="test-model", messages=[{"role": "user", "content": "Hello"}])
 
         with (
             patch("nilai_api.routers.private.get_prompt_from_nildb") as mock_get_prompt,
@@ -289,9 +264,8 @@ class TestNilDBEndpoints:
                 )
 
             assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-            assert (
-                "Unable to extract prompt from nilDB: Unable to extract prompt"
-                in str(exc_info.value.detail)
+            assert "Unable to extract prompt from nilDB: Unable to extract prompt" in str(
+                exc_info.value.detail
             )
 
     @pytest.mark.asyncio
@@ -322,18 +296,14 @@ class TestNilDBEndpoints:
         mock_log_ctx.start_model_timing = MagicMock()
         mock_log_ctx.end_model_timing = MagicMock()
 
-        request = ChatRequest(
-            model="test-model", messages=[{"role": "user", "content": "Hello"}]
-        )
+        request = ChatRequest(model="test-model", messages=[{"role": "user", "content": "Hello"}])
 
         with (
             patch("nilai_api.routers.private.get_prompt_from_nildb") as mock_get_prompt,
             patch("nilai_api.routers.private.AsyncOpenAI") as mock_openai_client,
             patch("nilai_api.routers.private.state.get_model") as mock_get_model,
             patch("nilai_api.routers.private.handle_nilrag") as mock_handle_nilrag,
-            patch(
-                "nilai_api.routers.private.handle_web_search"
-            ) as mock_handle_web_search,
+            patch("nilai_api.routers.private.handle_web_search") as mock_handle_web_search,
         ):
             # Mock state.get_model() to return a ModelEndpoint
             mock_model_endpoint = MagicMock()
@@ -372,9 +342,7 @@ class TestNilDBEndpoints:
                 },
             }
             # Make the create method itself an AsyncMock that returns the response
-            mock_client_instance.chat.completions.create = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client_instance.chat.completions.create = AsyncMock(return_value=mock_response)
             mock_client_instance.close = AsyncMock()
             mock_openai_client.return_value = mock_client_instance
 
@@ -405,9 +373,7 @@ class TestNilDBEndpoints:
 
     def test_prompt_delegation_token_model_validation(self):
         """Test PromptDelegationToken model validation"""
-        token = PromptDelegationToken(
-            token="delegation_token_123", did="did:nil:builder123"
-        )
+        token = PromptDelegationToken(token="delegation_token_123", did="did:nil:builder123")
         assert token.token == "delegation_token_123"
         assert token.did == "did:nil:builder123"
 

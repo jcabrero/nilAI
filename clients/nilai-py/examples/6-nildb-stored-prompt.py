@@ -13,18 +13,18 @@ Key components:
 """
 
 import json
-from typing import Dict, Any
-
-from nilai_py import (
-    Client,
-    DelegationTokenServer,
-    AuthType,
-    DelegationServerConfig,
-    PromptDocumentInfo,
-    DelegationTokenServerType,
-)
+from typing import Any
 
 from config import API_KEY
+
+from nilai_py import (
+    AuthType,
+    Client,
+    DelegationServerConfig,
+    DelegationTokenServer,
+    DelegationTokenServerType,
+    PromptDocumentInfo,
+)
 
 
 class FileLoader:
@@ -33,14 +33,14 @@ class FileLoader:
     @staticmethod
     def load_private_key(filename: str) -> str:
         """Load private key from JSON file."""
-        with open(filename, "r") as f:
+        with open(filename) as f:
             key_data = json.load(f)
         return key_data["key"]
 
     @staticmethod
-    def load_stored_prompt_data(filename: str) -> Dict[str, str]:
+    def load_stored_prompt_data(filename: str) -> dict[str, str]:
         """Load stored prompt data including DID and document IDs."""
-        with open(filename, "r") as f:
+        with open(filename) as f:
             prompt_data = json.load(f)
         return {
             "did": prompt_data["did"],
@@ -68,7 +68,7 @@ class DelegationServerManager:
         )
 
     def create_prompt_data_owner_server(
-        self, private_key: str, prompt_data: Dict[str, str]
+        self, private_key: str, prompt_data: dict[str, str]
     ) -> DelegationTokenServer:
         """Create server for the prompt data owner (manages document access)."""
         return DelegationTokenServer(
@@ -148,14 +148,10 @@ def main():
     # Make request using stored prompt
     response = stored_prompt_client.create_completion(
         model="openai/gpt-oss-20b",
-        messages=[
-            {"role": "user", "content": "Hello! Can you help me with something?"}
-        ],
+        messages=[{"role": "user", "content": "Hello! Can you help me with something?"}],
     )
 
-    print(
-        "Your response, if using the previous stored prompt should have a cheese answer:"
-    )
+    print("Your response, if using the previous stored prompt should have a cheese answer:")
     print(f"Response: {response.choices[0].message.content}")
 
 

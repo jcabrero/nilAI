@@ -1,7 +1,8 @@
 import enum
-from typing import Optional
+
 from pydantic import BaseModel
-from secp256k1 import PrivateKey as NilAuthPrivateKey, PublicKey as NilAuthPublicKey
+from secp256k1 import PrivateKey as NilAuthPrivateKey
+from secp256k1 import PublicKey as NilAuthPublicKey
 
 
 class AuthType(enum.Enum):
@@ -21,9 +22,9 @@ class PromptDocumentInfo(BaseModel):
 
 class DelegationServerConfig(BaseModel):
     mode: DelegationTokenServerType = DelegationTokenServerType.SUBSCRIPTION_OWNER
-    expiration_time: Optional[int] = 60
-    token_max_uses: Optional[int] = 1
-    prompt_document: Optional[PromptDocumentInfo] = None
+    expiration_time: int | None = 60
+    token_max_uses: int | None = 1
+    prompt_document: PromptDocumentInfo | None = None
 
 
 class RequestType(enum.Enum):
@@ -47,11 +48,11 @@ DefaultDelegationTokenServerConfig = DelegationServerConfig(
 )
 
 __all__ = [
+    "AuthType",
+    "DefaultDelegationTokenServerConfig",
+    "DelegationTokenRequest",
+    "DelegationTokenResponse",
     "NilAuthPrivateKey",
     "NilAuthPublicKey",
     "PromptDocumentInfo",
-    "AuthType",
-    "DelegationTokenRequest",
-    "DelegationTokenResponse",
-    "DefaultDelegationTokenServerConfig",
 ]

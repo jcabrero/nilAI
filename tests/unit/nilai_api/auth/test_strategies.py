@@ -1,9 +1,10 @@
-import pytest
-from unittest.mock import patch, MagicMock
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
+from unittest.mock import MagicMock, patch
 
-from nilai_api.auth.strategies import api_key_strategy, nuc_strategy
+import pytest
+
 from nilai_api.auth.common import AuthenticationInfo, PromptDocument
+from nilai_api.auth.strategies import api_key_strategy, nuc_strategy
 from nilai_api.db.users import RateLimits, UserModel
 
 
@@ -22,9 +23,7 @@ class TestAuthStrategies:
     @pytest.fixture
     def mock_prompt_document(self):
         """Mock PromptDocument fixture"""
-        return PromptDocument(
-            document_id="test-document-123", owner_did=f"did:nil:{'1' * 66}"
-        )
+        return PromptDocument(document_id="test-document-123", owner_did=f"did:nil:{'1' * 66}")
 
     @pytest.mark.asyncio
     async def test_api_key_strategy_success(self, mock_user_model):
@@ -57,15 +56,9 @@ class TestAuthStrategies:
         """Test NUC authentication with existing user and prompt document"""
         with (
             patch("nilai_api.auth.strategies.validate_nuc") as mock_validate_nuc,
-            patch(
-                "nilai_api.auth.strategies.get_token_rate_limit"
-            ) as mock_get_rate_limit,
-            patch(
-                "nilai_api.auth.strategies.get_token_prompt_document"
-            ) as mock_get_prompt_doc,
-            patch(
-                "nilai_api.auth.strategies.validate_credential"
-            ) as mock_validate_credential,
+            patch("nilai_api.auth.strategies.get_token_rate_limit") as mock_get_rate_limit,
+            patch("nilai_api.auth.strategies.get_token_prompt_document") as mock_get_prompt_doc,
+            patch("nilai_api.auth.strategies.validate_credential") as mock_validate_credential,
         ):
             mock_validate_nuc.return_value = ("subscription_holder", "user_id")
             mock_get_rate_limit.return_value = None
@@ -77,22 +70,20 @@ class TestAuthStrategies:
             assert isinstance(result, AuthenticationInfo)
             assert result.token_rate_limit is None
             assert result.prompt_document == mock_prompt_document
-            mock_validate_credential.assert_called_once_with(
-                "subscription_holder", is_public=True
-            )
+            mock_validate_credential.assert_called_once_with("subscription_holder", is_public=True)
 
     @pytest.mark.asyncio
     async def test_nuc_strategy_new_user_with_token_limits(
         self, mock_prompt_document, mock_user_model
     ):
         """Test NUC authentication creating new user with token limits"""
-        from nilai_api.auth.nuc_helpers.usage import TokenRateLimits, TokenRateLimit
+        from nilai_api.auth.nuc_helpers.usage import TokenRateLimit, TokenRateLimits
 
         mock_token_limits = TokenRateLimits(
             limits=[
                 TokenRateLimit(
                     signature="test-signature",
-                    expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+                    expires_at=datetime.now(UTC) + timedelta(days=1),
                     usage_limit=1,
                 )
             ]
@@ -100,15 +91,9 @@ class TestAuthStrategies:
 
         with (
             patch("nilai_api.auth.strategies.validate_nuc") as mock_validate_nuc,
-            patch(
-                "nilai_api.auth.strategies.get_token_rate_limit"
-            ) as mock_get_rate_limit,
-            patch(
-                "nilai_api.auth.strategies.get_token_prompt_document"
-            ) as mock_get_prompt_doc,
-            patch(
-                "nilai_api.auth.strategies.validate_credential"
-            ) as mock_validate_credential,
+            patch("nilai_api.auth.strategies.get_token_rate_limit") as mock_get_rate_limit,
+            patch("nilai_api.auth.strategies.get_token_prompt_document") as mock_get_prompt_doc,
+            patch("nilai_api.auth.strategies.validate_credential") as mock_validate_credential,
         ):
             mock_validate_nuc.return_value = ("subscription_holder", "new_user_id")
             mock_get_rate_limit.return_value = mock_token_limits
@@ -120,24 +105,16 @@ class TestAuthStrategies:
             assert isinstance(result, AuthenticationInfo)
             assert result.token_rate_limit == mock_token_limits
             assert result.prompt_document == mock_prompt_document
-            mock_validate_credential.assert_called_once_with(
-                "subscription_holder", is_public=True
-            )
+            mock_validate_credential.assert_called_once_with("subscription_holder", is_public=True)
 
     @pytest.mark.asyncio
     async def test_nuc_strategy_no_prompt_document(self, mock_user_model):
         """Test NUC authentication when no prompt document is found"""
         with (
             patch("nilai_api.auth.strategies.validate_nuc") as mock_validate_nuc,
-            patch(
-                "nilai_api.auth.strategies.get_token_rate_limit"
-            ) as mock_get_rate_limit,
-            patch(
-                "nilai_api.auth.strategies.get_token_prompt_document"
-            ) as mock_get_prompt_doc,
-            patch(
-                "nilai_api.auth.strategies.validate_credential"
-            ) as mock_validate_credential,
+            patch("nilai_api.auth.strategies.get_token_rate_limit") as mock_get_rate_limit,
+            patch("nilai_api.auth.strategies.get_token_prompt_document") as mock_get_prompt_doc,
+            patch("nilai_api.auth.strategies.validate_credential") as mock_validate_credential,
         ):
             mock_validate_nuc.return_value = ("subscription_holder", "user_id")
             mock_get_rate_limit.return_value = None
@@ -164,21 +141,13 @@ class TestAuthStrategies:
         """Test NUC authentication when get_token_prompt_document fails"""
         with (
             patch("nilai_api.auth.strategies.validate_nuc") as mock_validate_nuc,
-            patch(
-                "nilai_api.auth.strategies.get_token_rate_limit"
-            ) as mock_get_rate_limit,
-            patch(
-                "nilai_api.auth.strategies.get_token_prompt_document"
-            ) as mock_get_prompt_doc,
-            patch(
-                "nilai_api.auth.strategies.validate_credential"
-            ) as mock_validate_credential,
+            patch("nilai_api.auth.strategies.get_token_rate_limit") as mock_get_rate_limit,
+            patch("nilai_api.auth.strategies.get_token_prompt_document") as mock_get_prompt_doc,
+            patch("nilai_api.auth.strategies.validate_credential") as mock_validate_credential,
         ):
             mock_validate_nuc.return_value = ("subscription_holder", "user_id")
             mock_get_rate_limit.return_value = None
-            mock_get_prompt_doc.side_effect = Exception(
-                "Prompt document extraction failed"
-            )
+            mock_get_prompt_doc.side_effect = Exception("Prompt document extraction failed")
             mock_validate_credential.return_value = mock_user_model
 
             # The function should let the exception bubble up or handle it gracefully
@@ -193,9 +162,7 @@ class TestAuthStrategies:
         """Test that all strategies return AuthenticationInfo with prompt_document field"""
         mock_user_model = MagicMock(spec=UserModel)
         mock_user_model.user_id = "test"
-        mock_user_model.rate_limits = (
-            RateLimits().get_effective_limits().model_dump_json()
-        )
+        mock_user_model.rate_limits = RateLimits().get_effective_limits().model_dump_json()
         mock_user_model.rate_limits_obj = RateLimits().get_effective_limits()
 
         # Test API key strategy
@@ -208,15 +175,9 @@ class TestAuthStrategies:
         # Test NUC strategy
         with (
             patch("nilai_api.auth.strategies.validate_nuc") as mock_validate_nuc,
-            patch(
-                "nilai_api.auth.strategies.get_token_rate_limit"
-            ) as mock_get_rate_limit,
-            patch(
-                "nilai_api.auth.strategies.get_token_prompt_document"
-            ) as mock_get_prompt_doc,
-            patch(
-                "nilai_api.auth.strategies.validate_credential"
-            ) as mock_validate_credential,
+            patch("nilai_api.auth.strategies.get_token_rate_limit") as mock_get_rate_limit,
+            patch("nilai_api.auth.strategies.get_token_prompt_document") as mock_get_prompt_doc,
+            patch("nilai_api.auth.strategies.validate_credential") as mock_validate_credential,
         ):
             mock_validate_nuc.return_value = ("subscription_holder", "user_id")
             mock_get_rate_limit.return_value = None

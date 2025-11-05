@@ -1,30 +1,30 @@
 from typing import List, Optional
-import httpx
-
-from secretvaults import SecretVaultUserClient
 import uuid
 
-from nilai_py.nildb.models import (
-    DocumentReference,
-    UserSetupResult,
-    PromptDelegationToken,
-)
-from nilai_py.nildb.config import NilDBConfig, DefaultNilDBConfig
-from nilai_py.nildb.user import create_user_if_not_exists
+import httpx
+from secretvaults import SecretVaultUserClient
+
+from nilai_py.nildb.config import DefaultNilDBConfig, NilDBConfig
 from nilai_py.nildb.document import (
     create_document_core,
     list_data_references_core,
 )
+from nilai_py.nildb.models import (
+    DocumentReference,
+    PromptDelegationToken,
+    UserSetupResult,
+)
+from nilai_py.nildb.user import create_user_if_not_exists
 
 
-class NilDBPromptManager(object):
+class NilDBPromptManager:
     """Manager for handling document prompts in NilDB"""
 
     def __init__(self, nilai_url: str, nildb_config: NilDBConfig = DefaultNilDBConfig):
         self.nilai_url = nilai_url
         self.nildb_config = nildb_config
-        self._client: Optional[SecretVaultUserClient] = None
-        self._user_result: Optional[UserSetupResult] = None
+        self._client: SecretVaultUserClient | None = None
+        self._user_result: UserSetupResult | None = None
 
     @staticmethod
     async def init(
@@ -50,17 +50,14 @@ class NilDBPromptManager(object):
 
     async def setup_user(self, keys_dir: str = "keys") -> UserSetupResult:
         """Setup user keypair and client with configuration validation and error handling"""
-        result = await create_user_if_not_exists(
-            config=self.nildb_config, keys_dir=keys_dir
-        )
+        result = await create_user_if_not_exists(config=self.nildb_config, keys_dir=keys_dir)
 
         if not result.success:
             raise RuntimeError(f"User setup failed: {result.error}")
-        else:
-            if result.keypair is not None:
-                print(
-                    f"🎉 User setup successful! 🎉\n  🔑 Keys saved to: {result.keys_saved_to}\n  🔐 Public Key: {result.keypair.public_key_hex(compressed=True)}\n  🆔 DID: {result.keypair.to_did_string()}"
-                )
+        if result.keypair is not None:
+            print(
+                f"🎉 User setup successful! 🎉\n  🔑 Keys saved to: {result.keys_saved_to}\n  🔐 Public Key: {result.keypair.public_key_hex(compressed=True)}\n  🆔 DID: {result.keypair.to_did_string()}"
+            )
         return result
 
     async def request_nildb_delegation_token(self, token=None) -> PromptDelegationToken:
@@ -71,16 +68,12 @@ class NilDBPromptManager(object):
 
         prompt_delegation_token = httpx.get(
             f"{self.nilai_url}delegation",
-            params={
-                "prompt_delegation_request": self.user_result.keypair.to_did_string()
-            },
+            params={"prompt_delegation_request": self.user_result.keypair.to_did_string()},
             verify=False,
             headers={"Authorization": f"Bearer {token}"},
         )
 
-        print(
-            f"Delegation token response status: {prompt_delegation_token.status_code}"
-        )
+        print(f"Delegation token response status: {prompt_delegation_token.status_code}")
 
         if prompt_delegation_token.status_code != 200:
             raise RuntimeError(
@@ -106,20 +99,16 @@ class NilDBPromptManager(object):
             else:
                 print("No document references found.")
         except Exception as e:
-            print(f"An error occurred while listing document references: {str(e)}")
+            print(f"An error occurred while listing document references: {e!s}")
 
     async def create_prompt(
         self, prompt: str, nilai_invocation_token: str
-    ) -> List[DocumentReference]:
+    ) -> list[DocumentReference]:
         """Store a new document prompt with the given content based on the document ID"""
-        print(
-            f"\n=== Create Document on {self.nildb_config.collection} for prompt: {prompt} ==="
-        )
+        print(f"\n=== Create Document on {self.nildb_config.collection} for prompt: {prompt} ===")
 
         try:
-            print(
-                f"\n📝 Creating document in collection {self.nildb_config.collection}"
-            )
+            print(f"\n📝 Creating document in collection {self.nildb_config.collection}")
             print("=" * 60)
 
             # Load delegation token from file
@@ -147,7 +136,7 @@ class NilDBPromptManager(object):
                 print(f"❌ Failed to create document: {result.error or result.message}")
             return result.data if result.success and result.data else []
         except Exception as e:
-            print(f"An error occurred while creating the document: {str(e)}")
+            print(f"An error occurred while creating the document: {e!s}")
             return []
 
     async def close(self):

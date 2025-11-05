@@ -6,17 +6,18 @@ Create Date: 2025-10-31 09:43:12.022675
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+
 # revision identifiers, used by Alembic.
 revision: str = "0ba073468afc"
-down_revision: Union[str, None] = "9ddf28cf6b6f"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "9ddf28cf6b6f"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -24,21 +25,15 @@ def upgrade() -> None:
     # query_logs: new telemetry columns (with defaults to backfill existing rows)
     op.add_column(
         "query_logs",
-        sa.Column(
-            "tool_calls", sa.Integer(), server_default=sa.text("0"), nullable=False
-        ),
+        sa.Column("tool_calls", sa.Integer(), server_default=sa.text("0"), nullable=False),
     )
     op.add_column(
         "query_logs",
-        sa.Column(
-            "temperature", sa.Float(), server_default=sa.text("0.9"), nullable=True
-        ),
+        sa.Column("temperature", sa.Float(), server_default=sa.text("0.9"), nullable=True),
     )
     op.add_column(
         "query_logs",
-        sa.Column(
-            "max_tokens", sa.Integer(), server_default=sa.text("4096"), nullable=True
-        ),
+        sa.Column("max_tokens", sa.Integer(), server_default=sa.text("4096"), nullable=True),
     )
     op.add_column(
         "query_logs",
@@ -87,40 +82,28 @@ def upgrade() -> None:
     )
     op.add_column(
         "query_logs",
-        sa.Column(
-            "was_nildb", sa.Boolean(), server_default=sa.text("False"), nullable=False
-        ),
+        sa.Column("was_nildb", sa.Boolean(), server_default=sa.text("False"), nullable=False),
     )
     op.add_column(
         "query_logs",
-        sa.Column(
-            "was_nilrag", sa.Boolean(), server_default=sa.text("False"), nullable=False
-        ),
+        sa.Column("was_nilrag", sa.Boolean(), server_default=sa.text("False"), nullable=False),
     )
     op.add_column(
         "query_logs",
-        sa.Column(
-            "error_code", sa.Integer(), server_default=sa.text("200"), nullable=False
-        ),
+        sa.Column("error_code", sa.Integer(), server_default=sa.text("200"), nullable=False),
     )
     op.add_column(
         "query_logs",
-        sa.Column(
-            "error_message", sa.Text(), server_default=sa.text("'OK'"), nullable=False
-        ),
+        sa.Column("error_message", sa.Text(), server_default=sa.text("'OK'"), nullable=False),
     )
 
     # query_logs: remove FK to users.userid before dropping the column later
     op.drop_constraint("query_logs_userid_fkey", "query_logs", type_="foreignkey")
 
     # query_logs: add lockid and index, drop legacy userid and its index
-    op.add_column(
-        "query_logs", sa.Column("lockid", sa.String(length=75), nullable=False)
-    )
+    op.add_column("query_logs", sa.Column("lockid", sa.String(length=75), nullable=False))
     op.drop_index("ix_query_logs_userid", table_name="query_logs")
-    op.create_index(
-        op.f("ix_query_logs_lockid"), "query_logs", ["lockid"], unique=False
-    )
+    op.create_index(op.f("ix_query_logs_lockid"), "query_logs", ["lockid"], unique=False)
     op.drop_column("query_logs", "userid")
 
     # users: drop legacy token counters
@@ -176,20 +159,14 @@ def downgrade() -> None:
     )
     op.add_column(
         "users",
-        sa.Column(
-            "prompt_tokens", sa.INTEGER(), server_default=sa.text("0"), nullable=False
-        ),
+        sa.Column("prompt_tokens", sa.INTEGER(), server_default=sa.text("0"), nullable=False),
     )
 
     # query_logs: restore userid, index and FK; drop new columns
-    op.add_column(
-        "query_logs", sa.Column("userid", sa.VARCHAR(length=75), nullable=False)
-    )
+    op.add_column("query_logs", sa.Column("userid", sa.VARCHAR(length=75), nullable=False))
     op.drop_index(op.f("ix_query_logs_lockid"), table_name="query_logs")
     op.create_index("ix_query_logs_userid", "query_logs", ["userid"], unique=False)
-    op.create_foreign_key(
-        "query_logs_userid_fkey", "query_logs", "users", ["userid"], ["userid"]
-    )
+    op.create_foreign_key("query_logs_userid_fkey", "query_logs", "users", ["userid"], ["userid"])
     op.drop_column("query_logs", "lockid")
     op.drop_column("query_logs", "error_message")
     op.drop_column("query_logs", "error_code")

@@ -1,8 +1,9 @@
 import asyncio
 import json
 
-from nilai_api.db.users import RateLimits, UserManager, UserModel
 import click
+
+from nilai_api.db.users import RateLimits, UserManager, UserModel
 
 
 @click.command()
@@ -10,9 +11,7 @@ import click
 @click.option("--ratelimit-day", type=int, help="number of request per day")
 @click.option("--ratelimit-hour", type=int, help="number of request per hour")
 @click.option("--ratelimit-minute", type=int, help="number of request per minute")
-@click.option(
-    "--web-search-ratelimit-day", type=int, help="number of web search request per day"
-)
+@click.option("--web-search-ratelimit-day", type=int, help="number of web search request per day")
 @click.option(
     "--web-search-ratelimit-hour",
     type=int,

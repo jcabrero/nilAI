@@ -1,18 +1,19 @@
-from typing import Any, Dict, Optional
+import datetime
+from typing import Any
+
+from nuc.builder import Command, NucTokenBuilder
+from nuc.envelope import NucTokenEnvelope
+from nuc.token import Did
+
+from nilai_py.common import is_expired, new_root_token
 from nilai_py.niltypes import (
+    DefaultDelegationTokenServerConfig,
+    DelegationServerConfig,
     DelegationTokenRequest,
     DelegationTokenResponse,
-    DelegationServerConfig,
-    DefaultDelegationTokenServerConfig,
     DelegationTokenServerType,
     NilAuthPrivateKey,
 )
-
-from nilai_py.common import is_expired, new_root_token
-from nuc.envelope import NucTokenEnvelope
-from nuc.token import Did
-from nuc.builder import NucTokenBuilder, Command
-import datetime
 
 
 class DelegationTokenServer:
@@ -29,13 +30,11 @@ class DelegationTokenServer:
             config (DelegationServerConfig): The configuration for the server.
         """
         self.config: DelegationServerConfig = config
-        self.private_key: NilAuthPrivateKey = NilAuthPrivateKey(
-            bytes.fromhex(private_key)
-        )
-        self._root_token_envelope: Optional[NucTokenEnvelope] = None
+        self.private_key: NilAuthPrivateKey = NilAuthPrivateKey(bytes.fromhex(private_key))
+        self._root_token_envelope: NucTokenEnvelope | None = None
 
     @property
-    def root_token(self) -> Optional[NucTokenEnvelope]:
+    def root_token(self) -> NucTokenEnvelope | None:
         """
         Get the root token envelope. If the root token is expired, it will be refreshed.
         The root token is used to create delegation tokens.
@@ -59,9 +58,7 @@ class DelegationTokenServer:
             root_token (str): The new root token.
         """
         if self.config.mode != DelegationTokenServerType.DELEGATION_ISSUER:
-            raise ValueError(
-                "Delegation token can only be updated in DELEGATION_ISSUER mode"
-            )
+            raise ValueError("Delegation token can only be updated in DELEGATION_ISSUER mode")
         self._root_token_envelope = NucTokenEnvelope.parse(root_token)
 
     def get_delegation_request(self) -> DelegationTokenRequest:
@@ -81,7 +78,7 @@ class DelegationTokenServer:
     def create_delegation_token(
         self,
         delegation_token_request: DelegationTokenRequest,
-        config_override: Optional[DelegationServerConfig] = None,
+        config_override: DelegationServerConfig | None = None,
     ) -> DelegationTokenResponse:
         """
         Create a delegation token.
@@ -93,13 +90,11 @@ class DelegationTokenServer:
         Returns:
             DelegationTokenResponse: The delegation token response.
         """
-        config: DelegationServerConfig = (
-            config_override if config_override else self.config
-        )
+        config: DelegationServerConfig = config_override if config_override else self.config
 
         public_key: bytes = bytes.fromhex(delegation_token_request.public_key)
 
-        meta: Dict[str, Any] = {
+        meta: dict[str, Any] = {
             "usage_limit": config.token_max_uses,
         }
         if config.prompt_document:
@@ -112,7 +107,7 @@ class DelegationTokenServer:
         delegated_token = (
             NucTokenBuilder.extending(self.root_token)
             .expires_at(
-                datetime.datetime.now(datetime.timezone.utc)
+                datetime.datetime.now(datetime.UTC)
                 + datetime.timedelta(
                     seconds=config.expiration_time if config.expiration_time else 10
                 )

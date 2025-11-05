@@ -1,12 +1,13 @@
-import pytest
 import openai
+import pytest
+
 from nilai_py import (
-    Client,
-    DelegationTokenServer,
     AuthType,
+    Client,
     DelegationServerConfig,
     DelegationTokenRequest,
     DelegationTokenResponse,
+    DelegationTokenServer,
 )
 
 from . import get_api_key
@@ -19,9 +20,7 @@ def test_e2e_api_key():
     )
     response = client.chat.completions.create(
         model="meta-llama/Llama-3.2-3B-Instruct",
-        messages=[
-            {"role": "user", "content": "Hello! Can you help me with something?"}
-        ],
+        messages=[{"role": "user", "content": "Hello! Can you help me with something?"}],
     )
 
     print(f"Response: {response.choices[0].message.content}")
@@ -44,17 +43,13 @@ def test_e2e_delegation_token():
     # Client produces a delegation request
     delegation_request: DelegationTokenRequest = client.get_delegation_request()
     # Server creates a delegation token
-    delegation_token: DelegationTokenResponse = server.create_delegation_token(
-        delegation_request
-    )
+    delegation_token: DelegationTokenResponse = server.create_delegation_token(delegation_request)
     # Client updates the delegation token
     client.update_delegation(delegation_token)
     # Client uses the delegation token to make a request
     response = client.chat.completions.create(
         model="meta-llama/Llama-3.2-3B-Instruct",
-        messages=[
-            {"role": "user", "content": "Hello! Can you help me with something?"}
-        ],
+        messages=[{"role": "user", "content": "Hello! Can you help me with something?"}],
     )
 
     print(f"Response: {response.choices[0].message.content}")
@@ -77,9 +72,7 @@ def test_e2e_delegation_token_expired():
     # Client produces a delegation request
     delegation_request: DelegationTokenRequest = client.get_delegation_request()
     # Server creates a delegation token
-    delegation_token: DelegationTokenResponse = server.create_delegation_token(
-        delegation_request
-    )
+    delegation_token: DelegationTokenResponse = server.create_delegation_token(delegation_request)
     # Client updates the delegation token
     client.update_delegation(delegation_token)
 
@@ -87,9 +80,7 @@ def test_e2e_delegation_token_expired():
         # Client uses the delegation token to make a request
         response = client.chat.completions.create(
             model="meta-llama/Llama-3.2-3B-Instruct",
-            messages=[
-                {"role": "user", "content": "Hello! Can you help me with something?"}
-            ],
+            messages=[{"role": "user", "content": "Hello! Can you help me with something?"}],
         )
 
         print(f"Response: {response.choices[0].message.content}")
@@ -112,17 +103,13 @@ def test_e2e_delegation_token_max_uses():
     # Client produces a delegation request
     delegation_request: DelegationTokenRequest = client.get_delegation_request()
     # Server creates a delegation token
-    delegation_token: DelegationTokenResponse = server.create_delegation_token(
-        delegation_request
-    )
+    delegation_token: DelegationTokenResponse = server.create_delegation_token(delegation_request)
     # Client updates the delegation token
     client.update_delegation(delegation_token)
     # Client uses the delegation token to make a request
     response = client.chat.completions.create(
         model="meta-llama/Llama-3.2-3B-Instruct",
-        messages=[
-            {"role": "user", "content": "Hello! Can you help me with something?"}
-        ],
+        messages=[{"role": "user", "content": "Hello! Can you help me with something?"}],
     )
 
     print(f"Response: {response.choices[0].message.content}")
@@ -130,9 +117,7 @@ def test_e2e_delegation_token_max_uses():
         # Client uses the delegation token to make a request
         response = client.chat.completions.create(
             model="meta-llama/Llama-3.2-3B-Instruct",
-            messages=[
-                {"role": "user", "content": "Hello! Can you help me with something?"}
-            ],
+            messages=[{"role": "user", "content": "Hello! Can you help me with something?"}],
         )
 
         print(f"Response: {response.choices[0].message.content}")

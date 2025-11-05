@@ -9,8 +9,8 @@ import pytest
 import pytest_asyncio
 from testcontainers.postgres import PostgresContainer
 
-from nilai_api.db import Base
 from nilai_api.config import CONFIG
+from nilai_api.db import Base
 
 
 @pytest.fixture(scope="session")

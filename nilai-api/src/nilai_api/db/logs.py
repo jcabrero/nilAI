@@ -1,14 +1,14 @@
+from datetime import UTC, datetime
 import logging
 import time
-from datetime import datetime, timezone
-from typing import Optional
 
-from nilai_common import Usage
 import sqlalchemy
-
-from sqlalchemy import Integer, String, DateTime, Text, Boolean, Float
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.exc import SQLAlchemyError
+
 from nilai_api.db import Base, Column, get_db_session
+from nilai_common import Usage
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +29,8 @@ class QueryLog(Base):
     total_tokens: int = Column(Integer, nullable=False)  # type: ignore
     tool_calls: int = Column(Integer, nullable=False)  # type: ignore
     web_search_calls: int = Column(Integer, nullable=False)  # type: ignore
-    temperature: Optional[float] = Column(Float, nullable=True)  # type: ignore
-    max_tokens: Optional[int] = Column(Integer, nullable=True)  # type: ignore
+    temperature: float | None = Column(Float, nullable=True)  # type: ignore
+    max_tokens: int | None = Column(Integer, nullable=True)  # type: ignore
 
     response_time_ms: int = Column(Integer, nullable=False)  # type: ignore
     model_response_time_ms: int = Column(Integer, nullable=False)  # type: ignore
@@ -55,15 +55,15 @@ class QueryLogContext:
     """
 
     def __init__(self):
-        self.user_id: Optional[str] = None
-        self.lockid: Optional[str] = None
-        self.model: Optional[str] = None
+        self.user_id: str | None = None
+        self.lockid: str | None = None
+        self.model: str | None = None
         self.prompt_tokens: int = 0
         self.completion_tokens: int = 0
         self.tool_calls: int = 0
         self.web_search_calls: int = 0
-        self.temperature: Optional[float] = None
-        self.max_tokens: Optional[int] = None
+        self.temperature: float | None = None
+        self.max_tokens: int | None = None
         self.was_streamed: bool = False
         self.was_multimodal: bool = False
         self.was_nildb: bool = False
@@ -73,10 +73,10 @@ class QueryLogContext:
 
         # Timing tracking
         self.start_time: float = time.monotonic()
-        self.model_start_time: Optional[float] = None
-        self.model_end_time: Optional[float] = None
-        self.tool_start_time: Optional[float] = None
-        self.tool_end_time: Optional[float] = None
+        self.model_start_time: float | None = None
+        self.model_end_time: float | None = None
+        self.tool_start_time: float | None = None
+        self.tool_end_time: float | None = None
 
     def set_user(self, user_id: str) -> None:
         """Set the user ID for this query."""
@@ -92,8 +92,8 @@ class QueryLogContext:
 
     def set_request_params(
         self,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         was_streamed: bool = False,
         was_multimodal: bool = False,
         was_nildb: bool = False,
@@ -183,7 +183,7 @@ class QueryLogContext:
                     web_search_calls=self.web_search_calls,
                     temperature=self.temperature,
                     max_tokens=self.max_tokens,
-                    query_timestamp=datetime.now(timezone.utc),
+                    query_timestamp=datetime.now(UTC),
                     response_time_ms=total_ms,
                     model_response_time_ms=model_ms,
                     tool_response_time_ms=tool_ms,
@@ -248,7 +248,7 @@ class QueryLogManager:
                     web_search_calls=web_search_calls,
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    query_timestamp=datetime.now(timezone.utc),
+                    query_timestamp=datetime.now(UTC),
                     response_time_ms=response_time_ms,
                     model_response_time_ms=model_response_time_ms,
                     tool_response_time_ms=tool_response_time_ms,
@@ -261,15 +261,13 @@ class QueryLogManager:
                 )
                 session.add(query_log)
                 await session.commit()
-                logger.info(
-                    f"Query logged for user {user_id} with total tokens {total_tokens}."
-                )
+                logger.info(f"Query logged for user {user_id} with total tokens {total_tokens}.")
         except SQLAlchemyError as e:
             logger.error(f"Error logging query: {e}")
             raise
 
     @staticmethod
-    async def get_user_token_usage(user_id: str) -> Optional[Usage]:
+    async def get_user_token_usage(user_id: str) -> Usage | None:
         """
         Get aggregated token usage for a specific user using server-side SQL aggregation.
         This is more efficient than fetching all records and calculating in Python.
@@ -308,4 +306,4 @@ class QueryLogManager:
             return None
 
 
-__all__ = ["QueryLogManager", "QueryLog", "QueryLogContext"]
+__all__ = ["QueryLog", "QueryLogContext", "QueryLogManager"]

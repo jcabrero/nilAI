@@ -1,39 +1,41 @@
 import base64
 import datetime
 import logging
-from typing import Tuple
-import httpx
 
-# Importing the types
-from nilai_api.auth.nuc_helpers.types import (
-    RootToken,
-    DelegationToken,
-    InvocationToken,
-    ChainId,
-)
-
-# Importing the secp256k1 library dependencies
-from secp256k1 import PrivateKey as NilAuthPrivateKey, PublicKey as NilAuthPublicKey
-
-# Importing the nuc library dependencies
-from nuc.payer import Payer
-from nuc.builder import NucTokenBuilder
-from nuc.nilauth import NilauthClient, BlindModule
-from nuc.envelope import NucTokenEnvelope
-from nuc.token import Command, Did, InvocationBody
-from nuc.validate import NucTokenValidator, ValidationParameters
+from cosmpy.aerial.client import LedgerClient, NetworkConfig
+from cosmpy.aerial.wallet import Address, LocalWallet
 
 # Importing the cosmpy library dependencies
 from cosmpy.crypto.keypairs import PrivateKey as NilchainPrivateKey
-from cosmpy.aerial.wallet import LocalWallet, Address
-from cosmpy.aerial.client import LedgerClient, NetworkConfig
+import httpx
+from nuc.builder import NucTokenBuilder
+from nuc.envelope import NucTokenEnvelope
+from nuc.nilauth import BlindModule, NilauthClient
+
+# Importing the nuc library dependencies
+from nuc.payer import Payer
+from nuc.token import Command, Did, InvocationBody
+from nuc.validate import NucTokenValidator, ValidationParameters
+
+# Importing the secp256k1 library dependencies
+from secp256k1 import PrivateKey as NilAuthPrivateKey
+from secp256k1 import PublicKey as NilAuthPublicKey
+
+# Importing the types
+from nilai_api.auth.nuc_helpers.types import (
+    ChainId,
+    DelegationToken,
+    InvocationToken,
+    RootToken,
+)
+
 
 logger = logging.getLogger(__name__)
 
 
 def get_wallet_and_private_key_from_mnemonic(
     mnemonic: str,
-) -> Tuple[LocalWallet, NilchainPrivateKey, NilAuthPrivateKey]:
+) -> tuple[LocalWallet, NilchainPrivateKey, NilAuthPrivateKey]:
     """
     Get the wallet and private key from a mnemonic
 
@@ -55,7 +57,7 @@ def get_wallet_and_private_key_from_mnemonic(
 ## Helpers
 def get_wallet_and_private_key(
     private_key_bytes: str | bytes | None = None,
-) -> Tuple[LocalWallet, NilchainPrivateKey, NilAuthPrivateKey]:
+) -> tuple[LocalWallet, NilchainPrivateKey, NilAuthPrivateKey]:
     """
     Get the wallet and private key from a private key bytes
 
@@ -89,9 +91,7 @@ def get_root_token(
         The root token
     """
     ## Getting the root token from nilauth
-    root_token: str = nilauth_client.request_token(
-        key=private_key, blind_module=blind_module
-    )
+    root_token: str = nilauth_client.request_token(key=private_key, blind_module=blind_module)
 
     return RootToken(token=root_token)
 
@@ -163,9 +163,7 @@ def pay_for_subscription(
         if get_unil_balance(
             wallet.address(), grpc_endpoint=grpc_endpoint
         ) < nilauth_client.subscription_cost(blind_module=blind_module):
-            raise RuntimeError(
-                "User does not have enough UNIL to pay for the subscription"
-            )
+            raise RuntimeError("User does not have enough UNIL to pay for the subscription")
         logger.info("[>] Paying for subscription")
         nilauth_client.pay_subscription(
             pubkey=public_key,
@@ -181,10 +179,10 @@ def pay_for_subscription(
             )
 
         logger.info(
-            f"EXPIRES IN: {subscription_details.details.expires_at - datetime.datetime.now(datetime.timezone.utc)}"
+            f"EXPIRES IN: {subscription_details.details.expires_at - datetime.datetime.now(datetime.UTC)}"
         )
         logger.info(
-            f"CAN BE RENEWED IN: {subscription_details.details.renewable_at - datetime.datetime.now(datetime.timezone.utc)}"
+            f"CAN BE RENEWED IN: {subscription_details.details.renewable_at - datetime.datetime.now(datetime.UTC)}"
         )
 
 
@@ -218,8 +216,7 @@ def get_delegation_token(
         .expires_at(
             expires_at
             if expires_at
-            else datetime.datetime.now(datetime.timezone.utc)
-            + datetime.timedelta(minutes=5)
+            else datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=5)
         )
         .audience(Did(user_public_key.serialize()))
         .command(Command(["nil", "ai", "generate"]))
@@ -290,9 +287,7 @@ def get_nilauth_public_key(nilauth_url: str) -> Did:
     return nilauth_public_key
 
 
-def validate_token(
-    nilauth_url: str, token: str, validation_parameters: ValidationParameters
-):
+def validate_token(nilauth_url: str, token: str, validation_parameters: ValidationParameters):
     """
     Validate a token
 

@@ -1,6 +1,7 @@
 """Model-specific configuration settings."""
 
 import os
+
 from pydantic import BaseModel, Field
 
 from .host import to_bool
@@ -17,9 +18,7 @@ class ModelCapabilities(BaseModel):
     """Model capability flags."""
 
     tool_support: bool = Field(default=False, description="Tool support flag")
-    multimodal_support: bool = Field(
-        default=False, description="Multimodal support flag"
-    )
+    multimodal_support: bool = Field(default=False, description="Multimodal support flag")
 
 
 # Global model settings instance

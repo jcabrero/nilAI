@@ -2,8 +2,9 @@ import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from fastapi.testclient import TestClient
+import pytest
+
 from nilai_api.db.users import RateLimits, UserModel
 from nilai_api.state import state
 from nilai_common import AttestationReport, Source
@@ -158,9 +159,7 @@ def test_get_attestation(mock_user, mock_user_manager, mock_state, client):
 
 
 def test_get_models(mock_user, mock_user_manager, mock_state, client):
-    response = client.get(
-        "/v1/models", headers={"Authorization": "Bearer test-api-key"}
-    )
+    response = client.get("/v1/models", headers={"Authorization": "Bearer test-api-key"})
     assert response.status_code == 200
     assert response.json() == [model_metadata.model_dump()]
 
@@ -180,12 +179,8 @@ def test_chat_completion(mock_user, mock_state, mock_user_manager, mocker, clien
     mock_chat.completions = mock_chat_completions
     mock_async_openai_instance = MagicMock()
     mock_async_openai_instance.chat = mock_chat
-    mocker.patch(
-        "nilai_api.routers.private.AsyncOpenAI", return_value=mock_async_openai_instance
-    )
-    mocker.patch(
-        "nilai_api.routers.private.QueryLogContext.commit", new_callable=AsyncMock
-    )
+    mocker.patch("nilai_api.routers.private.AsyncOpenAI", return_value=mock_async_openai_instance)
+    mocker.patch("nilai_api.routers.private.QueryLogContext.commit", new_callable=AsyncMock)
     response = client.post(
         "/v1/chat/completions",
         json={
@@ -224,9 +219,7 @@ def test_chat_completion_stream_includes_sources(
         "nilai_api.routers.private.handle_web_search",
         new=AsyncMock(return_value=mock_web_search_result),
     )
-    mocker.patch(
-        "nilai_api.routers.private.QueryLogContext.commit", new_callable=AsyncMock
-    )
+    mocker.patch("nilai_api.routers.private.QueryLogContext.commit", new_callable=AsyncMock)
 
     class MockChunk:
         def __init__(self, data, usage=None):
@@ -297,13 +290,9 @@ def test_chat_completion_stream_includes_sources(
 
     headers = {"Authorization": "Bearer test-api-key"}
 
-    with client.stream(
-        "POST", "/v1/chat/completions", json=payload, headers=headers
-    ) as response:
+    with client.stream("POST", "/v1/chat/completions", json=payload, headers=headers) as response:
         assert response.status_code == 200
-        data_lines = [
-            line for line in response.iter_lines() if line and line.startswith("data: ")
-        ]
+        data_lines = [line for line in response.iter_lines() if line and line.startswith("data: ")]
 
     assert data_lines, "Expected SSE data from stream response"
     first_payload = json.loads(data_lines[0][len("data: ") :])

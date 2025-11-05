@@ -1,6 +1,6 @@
-from nilai_py import Client
-
 from config import API_KEY
+
+from nilai_py import Client
 
 
 def main():
@@ -41,15 +41,11 @@ def main():
             and chunk.choices[0].delta.content is not None
         ):
             content = chunk.choices[0].delta.content
-            print(
-                content, end="", flush=True
-            )  # Print without newline and flush immediately
+            print(content, end="", flush=True)  # Print without newline and flush immediately
             full_response += content
 
     print("\n" + "=" * 50)
-    print(
-        f"\nStreaming completed. Full response length: {len(full_response)} characters"
-    )
+    print(f"\nStreaming completed. Full response length: {len(full_response)} characters")
 
 
 if __name__ == "__main__":

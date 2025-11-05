@@ -1,9 +1,10 @@
-from pydantic import BaseModel
-from typing import Optional
+
 from fastapi import HTTPException, status
-from nilai_api.db.users import UserData
-from nilai_api.auth.nuc_helpers.usage import TokenRateLimits, TokenRateLimit
+from pydantic import BaseModel
+
 from nilai_api.auth.nuc_helpers.nildb_document import PromptDocument
+from nilai_api.auth.nuc_helpers.usage import TokenRateLimit, TokenRateLimits
+from nilai_api.db.users import UserData
 
 
 class AuthenticationError(HTTPException):
@@ -17,14 +18,14 @@ class AuthenticationError(HTTPException):
 
 class AuthenticationInfo(BaseModel):
     user: UserData
-    token_rate_limit: Optional[TokenRateLimits]
-    prompt_document: Optional[PromptDocument]
+    token_rate_limit: TokenRateLimits | None
+    prompt_document: PromptDocument | None
 
 
 __all__ = [
     "AuthenticationError",
     "AuthenticationInfo",
-    "TokenRateLimits",
-    "TokenRateLimit",
     "PromptDocument",
+    "TokenRateLimit",
+    "TokenRateLimits",
 ]

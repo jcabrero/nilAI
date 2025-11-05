@@ -1,6 +1,7 @@
 # gunicorn.config.py
 from nilai_common.config import SETTINGS
 
+
 # Bind to address and port
 bind = ["0.0.0.0:8080"]
 

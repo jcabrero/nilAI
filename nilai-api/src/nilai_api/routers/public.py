@@ -1,9 +1,11 @@
 # Fast API and serving
 from fastapi import APIRouter
+
 from nilai_api.state import state
 
 # Internal libraries
 from nilai_common import HealthCheckResponse
+
 
 router = APIRouter()
 

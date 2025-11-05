@@ -1,6 +1,6 @@
 # Fast API and serving
 
-
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -9,6 +9,12 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from nilai_api import config
 from nilai_api.auth import get_auth_info
+from nilai_api.middleware.security import (
+    RequestMetricsMiddleware,
+    RequestSizeLimitMiddleware,
+    RequestTimeoutMiddleware,
+    SecurityHeadersMiddleware,
+)
 from nilai_api.rate_limiting import setup_redis_conn
 from nilai_api.routers import private, public
 from nilai_common.config import SETTINGS
@@ -91,11 +97,22 @@ app = FastAPI(
 app.include_router(public.router)
 app.include_router(private.router, dependencies=[Depends(get_auth_info)])
 
+# CORS configuration with allowlist (SECURITY: Never use ["*"] in production)
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080")
+allowed_origins = [origin.strip() for origin in CORS_ORIGINS.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,  # Allowlist only (configured via CORS_ORIGINS env var)
     allow_credentials=False,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Security middleware (order matters: outermost to innermost)
+app.add_middleware(SecurityHeadersMiddleware)  # Add security headers
+app.add_middleware(RequestMetricsMiddleware)  # Track request metrics
+app.add_middleware(RequestTimeoutMiddleware)  # Enforce timeout limits
+app.add_middleware(RequestSizeLimitMiddleware)  # Limit request size
+
 Instrumentator().instrument(app).expose(app, include_in_schema=False)

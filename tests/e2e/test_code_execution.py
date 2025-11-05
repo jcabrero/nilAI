@@ -99,11 +99,9 @@ def test_execute_python_sha256_e2e(client, model):
             break
     else:
         pytest.fail(
-
-                "Expected exact SHA-256 hash not found after retries.\n"
-                f"Last status: {last_status}\n"
-                f"Got: {last_content[:200]}...\n"
-                f"Expected: {expected}\n"
-                f"Full: {json.dumps(last_data, indent=2)[:1000] if last_data else '<no json>'}"
-
+            "Expected exact SHA-256 hash not found after retries.\n"
+            f"Last status: {last_status}\n"
+            f"Got: {last_content[:200]}...\n"
+            f"Expected: {expected}\n"
+            f"Full: {json.dumps(last_data, indent=2)[:1000] if last_data else '<no json>'}"
         )

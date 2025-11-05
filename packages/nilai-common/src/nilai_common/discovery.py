@@ -156,9 +156,7 @@ class ModelServiceDiscovery:
         self.last_refresh = datetime.now(UTC)
         self.is_healthy = True
 
-    async def keep_alive(
-        self, key: str | None = None, model_endpoint: ModelEndpoint | None = None
-    ):
+    async def keep_alive(self, key: str | None = None, model_endpoint: ModelEndpoint | None = None):
         """Keep the model registration alive by refreshing TTL with graceful shutdown."""
         if model_endpoint is None and self._model_key is None:
             logger.error("No model endpoint or key provided for keep_alive")

@@ -68,9 +68,7 @@ class TestDelegationTokenServer:
         envelope = Mock(spec=NucTokenEnvelope)
         token_wrapper = Mock()
         token = Mock(spec=NucToken)
-        token.expires_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
-            hours=1
-        )
+        token.expires_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1)
         token_wrapper.token = token
         envelope.token = token_wrapper
         return envelope
@@ -81,9 +79,7 @@ class TestDelegationTokenServer:
         envelope = Mock(spec=NucTokenEnvelope)
         token_wrapper = Mock()
         token = Mock(spec=NucToken)
-        token.expires_at = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
-            hours=1
-        )
+        token.expires_at = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1)
         token_wrapper.token = token
         envelope.token = token_wrapper
         return envelope

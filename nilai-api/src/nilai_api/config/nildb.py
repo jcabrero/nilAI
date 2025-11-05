@@ -1,4 +1,3 @@
-
 from pydantic import BaseModel, Field, field_validator
 from secretvaults.common.types import Uuid
 

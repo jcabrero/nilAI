@@ -1,6 +1,7 @@
 """Host and infrastructure configuration settings."""
 
 import os
+
 from pydantic import BaseModel, Field
 
 
@@ -14,12 +15,8 @@ class HostSettings(BaseModel):
 
     host: str = Field(default="localhost", description="Host of the service")
     port: int = Field(default=8000, description="Port of the service")
-    discovery_host: str = Field(
-        default="localhost", description="Host of the discovery service"
-    )
-    discovery_port: int = Field(
-        default=6379, description="Port of the discovery service"
-    )
+    discovery_host: str = Field(default="localhost", description="Host of the discovery service")
+    discovery_port: int = Field(default=6379, description="Port of the discovery service")
     gunicorn_workers: int = Field(default=10, description="Number of gunicorn workers")
 
 

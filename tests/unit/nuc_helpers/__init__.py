@@ -5,7 +5,8 @@ This module contains common dummy classes and utilities used across
 multiple test files to avoid code duplication.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
+
 from nuc.token import Did
 
 
@@ -15,7 +16,7 @@ class DummyNucToken:
     def __init__(self, meta=None, issuer=None, expires_at=None):
         self.meta = meta or {}
         self.issuer = issuer or Did.parse(f"did:nil:{'1' * 66}")
-        self.expires_at = expires_at or (datetime.now(timezone.utc) + timedelta(days=1))
+        self.expires_at = expires_at or (datetime.now(UTC) + timedelta(days=1))
 
 
 class DummyDecodedNucToken:

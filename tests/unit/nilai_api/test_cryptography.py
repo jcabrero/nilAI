@@ -2,6 +2,7 @@ from base64 import b64decode
 
 import pytest
 from secp256k1 import PrivateKey, PublicKey
+
 from nilai_api.crypto import generate_key_pair, sign_message, verify_signature
 
 

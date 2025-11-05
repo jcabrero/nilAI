@@ -1,27 +1,26 @@
-from typing import Callable, Awaitable, Optional
+from collections.abc import Awaitable, Callable
+from enum import Enum
 
 from fastapi import HTTPException
-from nilai_api.db.users import UserManager, UserModel, UserData
-from nilai_api.auth.nuc import (
-    validate_nuc,
-    get_token_rate_limit,
-    get_token_prompt_document,
-)
-from nilai_api.config import CONFIG
-from nilai_api.auth.common import (
-    PromptDocument,
-    TokenRateLimits,
-    AuthenticationError,
-    AuthenticationInfo,
-)
-
 from nilauth_credit_middleware import (
     CreditClientSingleton,
 )
 from nilauth_credit_middleware.api_model import ValidateCredentialResponse
 
+from nilai_api.auth.common import (
+    AuthenticationError,
+    AuthenticationInfo,
+    PromptDocument,
+    TokenRateLimits,
+)
+from nilai_api.auth.nuc import (
+    get_token_prompt_document,
+    get_token_rate_limit,
+    validate_nuc,
+)
+from nilai_api.config import CONFIG
+from nilai_api.db.users import UserData, UserManager, UserModel
 
-from enum import Enum
 
 # All strategies must return a UserModel
 # The strategies can raise any exception, which will be caught and converted to an AuthenticationError
@@ -73,16 +72,15 @@ async def validate_credential(credential: str, is_public: bool) -> UserModel:
     """
     credit_client = CreditClientSingleton.get_client()
     try:
-        validate_response: ValidateCredentialResponse = (
-            await credit_client.validate_credential(credential, is_public=is_public)
+        validate_response: ValidateCredentialResponse = await credit_client.validate_credential(
+            credential, is_public=is_public
         )
     except HTTPException as e:
         if e.status_code == 404:
             raise AuthenticationError(f"Credential not found: {e.detail}")
-        elif e.status_code == 401:
+        if e.status_code == 401:
             raise AuthenticationError(f"Credential is inactive: {e.detail}")
-        else:
-            raise AuthenticationError(f"Failed to validate credential: {e.detail}")
+        raise AuthenticationError(f"Failed to validate credential: {e.detail}")
 
     user_model = await UserManager.check_user(validate_response.user_id)
     if user_model is None:
@@ -110,8 +108,8 @@ async def nuc_strategy(nuc_token) -> AuthenticationInfo:
     Validate a NUC token and return the user model
     """
     subscription_holder, user = validate_nuc(nuc_token)
-    token_rate_limits: Optional[TokenRateLimits] = get_token_rate_limit(nuc_token)
-    prompt_document: Optional[PromptDocument] = get_token_prompt_document(nuc_token)
+    token_rate_limits: TokenRateLimits | None = get_token_rate_limit(nuc_token)
+    prompt_document: PromptDocument | None = get_token_prompt_document(nuc_token)
 
     user_model = await validate_credential(subscription_holder, is_public=True)
     return AuthenticationInfo(

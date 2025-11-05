@@ -1,7 +1,10 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from nuc.token import Did
+
 from nilai_api.auth.nuc_helpers.nildb_document import PromptDocument
+
 from ..nuc_helpers import DummyDecodedNucToken, DummyNucTokenEnvelope
 
 
@@ -39,9 +42,7 @@ class TestPromptDocument(unittest.TestCase):
         envelope = DummyNucTokenEnvelope(proofs)
         mock_parse.return_value = envelope
 
-        result = PromptDocument.from_token(
-            "dummy_token"
-        )  # will return the envelope above
+        result = PromptDocument.from_token("dummy_token")  # will return the envelope above
 
         self.assertIsNotNone(result)
         self.assertEqual(result.document_id, document_id)  # type: ignore
@@ -69,9 +70,7 @@ class TestPromptDocument(unittest.TestCase):
         envelope = DummyNucTokenEnvelope(proofs)
         mock_parse.return_value = envelope
 
-        result = PromptDocument.from_token(
-            "dummy_token"
-        )  # will return the envelope above
+        result = PromptDocument.from_token("dummy_token")  # will return the envelope above
 
         self.assertIsNotNone(result)
         self.assertEqual(result.document_id, document_id_1)  # type: ignore
@@ -96,9 +95,7 @@ class TestPromptDocument(unittest.TestCase):
         envelope = DummyNucTokenEnvelope(proofs)
         mock_parse.return_value = envelope
 
-        result = PromptDocument.from_token(
-            "dummy_token"
-        )  # will return the envelope above
+        result = PromptDocument.from_token("dummy_token")  # will return the envelope above
 
         self.assertIsNotNone(result)
         self.assertEqual(result.document_id, document_id)  # type: ignore
@@ -124,9 +121,7 @@ class TestPromptDocument(unittest.TestCase):
         envelope = DummyNucTokenEnvelope(proofs)
         mock_parse.return_value = envelope
 
-        result = PromptDocument.from_token(
-            "dummy_token"
-        )  # will return the envelope above
+        result = PromptDocument.from_token("dummy_token")  # will return the envelope above
 
         self.assertIsNotNone(result)
         self.assertEqual(result.document_id, document_id)  # type: ignore

@@ -1,7 +1,8 @@
-import pytest
+from datetime import UTC, datetime, timezone
+from typing import Any, Dict, List, Optional
 import uuid
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
+
+import pytest
 
 
 class MockUserDatabase:
@@ -19,7 +20,7 @@ class MockUserDatabase:
         """Generate a unique API key."""
         return str(uuid.uuid4())
 
-    async def insert_user(self, name: str, email: str) -> Dict[str, str]:
+    async def insert_user(self, name: str, email: str) -> dict[str, str]:
         """Insert a new user into the mock database."""
         user_id = self.generate_user_id()
         apikey = self.generate_api_key()
@@ -32,39 +33,35 @@ class MockUserDatabase:
             "prompt_tokens": 0,
             "completion_tokens": 0,
             "queries": 0,
-            "signup_date": datetime.now(timezone.utc),
+            "signup_date": datetime.now(UTC),
             "last_activity": None,
         }
 
         self.users[user_id] = user_data
         return {"user_id": user_id, "apikey": apikey}
 
-    async def check_api_key(self, api_key: str) -> Optional[dict]:
+    async def check_api_key(self, api_key: str) -> dict | None:
         """Validate an API key in the mock database."""
         for user in self.users.values():
             if user["apikey"] == api_key:
                 return {"name": user["name"], "user_id": user["user_id"]}
         return None
 
-    async def update_token_usage(
-        self, user_id: str, prompt_tokens: int, completion_tokens: int
-    ):
+    async def update_token_usage(self, user_id: str, prompt_tokens: int, completion_tokens: int):
         """Update token usage for a specific user."""
         if user_id in self.users:
             user = self.users[user_id]
             user["prompt_tokens"] += prompt_tokens
             user["completion_tokens"] += completion_tokens
             user["queries"] += 1
-            user["last_activity"] = datetime.now(timezone.utc)
+            user["last_activity"] = datetime.now(UTC)
 
-    async def log_query(
-        self, user_id: str, model: str, prompt_tokens: int, completion_tokens: int
-    ):
+    async def log_query(self, user_id: str, model: str, prompt_tokens: int, completion_tokens: int):
         """Log a user's query in the mock database."""
         query_log = {
             "id": self._next_query_log_id,
             "user_id": user_id,
-            "query_timestamp": datetime.now(timezone.utc),
+            "query_timestamp": datetime.now(UTC),
             "model": model,
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
@@ -74,7 +71,7 @@ class MockUserDatabase:
         self.query_logs[self._next_query_log_id] = query_log
         self._next_query_log_id += 1
 
-    async def get_token_usage(self, user_id: str) -> Optional[Dict[str, Any]]:
+    async def get_token_usage(self, user_id: str) -> dict[str, Any] | None:
         """Get token usage for a specific user."""
         user = self.users.get(user_id)
         if user:
@@ -86,11 +83,11 @@ class MockUserDatabase:
             }
         return None
 
-    async def get_all_users(self) -> Optional[List[Dict[str, Any]]]:
+    async def get_all_users(self) -> list[dict[str, Any]] | None:
         """Retrieve all users from the mock database."""
         return list(self.users.values()) if self.users else None
 
-    async def get_user_token_usage(self, user_id: str) -> Optional[Dict[str, int]]:
+    async def get_user_token_usage(self, user_id: str) -> dict[str, int] | None:
         """Retrieve total token usage for a user."""
         user = self.users.get(user_id)
         if user:

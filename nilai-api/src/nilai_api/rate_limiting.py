@@ -1,16 +1,17 @@
-import logging
 from asyncio import iscoroutine
-from typing import Callable, Tuple, Awaitable, Annotated
+from collections.abc import Awaitable, Callable
+import logging
+from typing import Annotated
 
-from nilai_api.db.users import RateLimits
-from pydantic import BaseModel
-from nilai_api.config import CONFIG
-
+from fastapi import HTTPException, Request, status
 from fastapi.params import Depends
-from fastapi import status, HTTPException, Request
-from redis.asyncio import from_url, Redis
+from pydantic import BaseModel
+from redis.asyncio import Redis, from_url
 
-from nilai_api.auth import get_auth_info, AuthenticationInfo, TokenRateLimits
+from nilai_api.auth import AuthenticationInfo, TokenRateLimits, get_auth_info
+from nilai_api.config import CONFIG
+from nilai_api.db.users import RateLimits
+
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +51,7 @@ async def setup_redis_conn(redis_url):
 async def _extract_coroutine_result(maybe_future, request: Request):
     if iscoroutine(maybe_future):
         return await maybe_future
-    else:
-        return maybe_future
+    return maybe_future
 
 
 class UserRateLimits(BaseModel):
@@ -79,9 +79,7 @@ class RateLimit:
     def __init__(
         self,
         concurrent: int | None = None,
-        concurrent_extractor: Callable[
-            [Request], Tuple[int, str] | Awaitable[Tuple[int, str]]
-        ]
+        concurrent_extractor: Callable[[Request], tuple[int, str] | Awaitable[tuple[int, str]]]
         | None = None,
         web_search_extractor: Callable[[Request], bool | Awaitable[bool]] | None = None,
     ):
@@ -134,9 +132,7 @@ class RateLimit:
             0,  # No expiration for for-good rate limit
         )
 
-        if (
-            user_limits.token_rate_limit
-        ):  # If the token rate limit is not None, we need to check it
+        if user_limits.token_rate_limit:  # If the token rate limit is not None, we need to check it
             # We create a record in redis for the signature
             # The key is the signature
             # The value is the usage limit
@@ -162,8 +158,7 @@ class RateLimit:
                     CONFIG.web_search.rps,
                     max(
                         1,
-                        CONFIG.web_search.max_concurrent_requests
-                        // CONFIG.web_search.count,
+                        CONFIG.web_search.max_concurrent_requests // CONFIG.web_search.count,
                     ),
                 )
                 await self.check_bucket(
@@ -252,9 +247,7 @@ class RateLimit:
                 headers={"Retry-After": str(expire)},
             )
 
-    async def check_concurrent_and_increment(
-        self, redis: Redis, request: Request
-    ) -> str | None:
+    async def check_concurrent_and_increment(self, redis: Redis, request: Request) -> str | None:
         if not self.max_concurrent and not self.concurrent_extractor:
             return None
 

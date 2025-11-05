@@ -2,8 +2,9 @@
 ##      AS THIS IS RESERVED TO SUBSCRIPTION OWNERS
 
 
-from nilai_py import Client
 from config import API_KEY
+
+from nilai_py import Client
 
 
 def main():
@@ -13,9 +14,7 @@ def main():
     # The API key will be displayed in the subscription details.
     # The Client class automatically handles the NUC token creation and management.
     ## For sandbox, use the following:
-    client = Client(
-        base_url="https://nilai-f910.nillion.network/nuc/v1/", api_key=API_KEY
-    )
+    client = Client(base_url="https://nilai-f910.nillion.network/nuc/v1/", api_key=API_KEY)
 
     # Make a request to the Nilai API
     # response = client.chat.completions.create(

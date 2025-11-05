@@ -1,10 +1,11 @@
-from nilai_py import Client
-import time
-import threading
-import sys
 import shutil
+import sys
+import threading
+import time
 
 from config import API_KEY
+
+from nilai_py import Client
 
 
 class VimStatusBar:

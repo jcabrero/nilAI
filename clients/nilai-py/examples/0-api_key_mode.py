@@ -1,7 +1,7 @@
-from nilai_py import Client
-
 from config import API_KEY
 from openai import DefaultHttpxClient
+
+from nilai_py import Client
 
 
 def main():

@@ -1,15 +1,14 @@
 import logging
 import uuid
+
 from pydantic import BaseModel, ConfigDict, Field
-
-from typing import Optional
-
 import sqlalchemy
-from sqlalchemy import String, JSON
+from sqlalchemy import JSON, String
 from sqlalchemy.exc import SQLAlchemyError
 
-from nilai_api.db import Base, Column, get_db_session
 from nilai_api.config import CONFIG
+from nilai_api.db import Base, Column, get_db_session
+
 
 logger = logging.getLogger(__name__)
 
@@ -18,18 +17,18 @@ class RateLimits(BaseModel):
     """Rate limit configuration for a user."""
 
     # General rate limits
-    user_rate_limit_day: Optional[int] = None
-    user_rate_limit_hour: Optional[int] = None
-    user_rate_limit_minute: Optional[int] = None
+    user_rate_limit_day: int | None = None
+    user_rate_limit_hour: int | None = None
+    user_rate_limit_minute: int | None = None
 
     # Web search rate limits
-    web_search_rate_limit_day: Optional[int] = None
-    web_search_rate_limit_hour: Optional[int] = None
-    web_search_rate_limit_minute: Optional[int] = None
+    web_search_rate_limit_day: int | None = None
+    web_search_rate_limit_hour: int | None = None
+    web_search_rate_limit_minute: int | None = None
 
     # For-good rate limits
-    user_rate_limit: Optional[int] = None
-    web_search_rate_limit: Optional[int] = None
+    user_rate_limit: int | None = None
+    web_search_rate_limit: int | None = None
 
     def get_effective_limits(self) -> "RateLimits":
         """Return rate limits with defaults applied from config."""
@@ -46,8 +45,7 @@ class RateLimits(BaseModel):
             or CONFIG.rate_limiting.web_search_rate_limit_hour,
             web_search_rate_limit_minute=self.web_search_rate_limit_minute
             or CONFIG.rate_limiting.web_search_rate_limit_minute,
-            user_rate_limit=self.user_rate_limit
-            or CONFIG.rate_limiting.user_rate_limit,
+            user_rate_limit=self.user_rate_limit or CONFIG.rate_limiting.user_rate_limit,
             web_search_rate_limit=self.web_search_rate_limit
             or CONFIG.rate_limiting.user_rate_limit,
         )
@@ -142,7 +140,7 @@ class UserManager:
             raise
 
     @staticmethod
-    async def check_user(user_id: str) -> Optional[UserModel]:
+    async def check_user(user_id: str) -> UserModel | None:
         """
         Validate an API key.
 
@@ -184,12 +182,11 @@ class UserManager:
                     await session.commit()
                     logger.info(f"Updated rate limits for user {user_id}")
                     return True
-                else:
-                    logger.warning(f"User {user_id} not found")
-                    return False
+                logger.warning(f"User {user_id} not found")
+                return False
         except SQLAlchemyError as e:
             logger.error(f"Error updating rate limits: {e}")
             return False
 
 
-__all__ = ["UserManager", "UserData", "UserModel"]
+__all__ = ["UserData", "UserManager", "UserModel"]

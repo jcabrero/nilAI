@@ -1,12 +1,13 @@
-from openai import DefaultHttpxClient
-from nilai_py import Client
-import time
-import threading
-import sys
-import shutil
 from concurrent.futures import ThreadPoolExecutor
+import shutil
+import sys
+import threading
+import time
 
 from config import API_KEY
+from openai import DefaultHttpxClient
+
+from nilai_py import Client
 
 
 class VimStatusBar:

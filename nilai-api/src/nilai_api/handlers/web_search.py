@@ -1,26 +1,27 @@
-import logging
-import re
 import asyncio
 from functools import lru_cache
-from typing import List, Dict, Any
+import logging
+import re
+from typing import Any
 
+from fastapi import HTTPException, status
 import httpx
 import trafilatura
-from fastapi import HTTPException, status
 
 from nilai_api.config import CONFIG
 from nilai_common.api_model import (
     ChatRequest,
     MessageAdapter,
+    ResultContent,
     SearchResult,
     Source,
-    WebSearchEnhancedMessages,
-    WebSearchContext,
-    ResultContent,
-    TopicResponse,
     Topic,
     TopicQuery,
+    TopicResponse,
+    WebSearchContext,
+    WebSearchEnhancedMessages,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def _get_http_client() -> httpx.AsyncClient:
     )
 
 
-async def _make_brave_api_request(query: str) -> Dict[str, Any]:
+async def _make_brave_api_request(query: str) -> dict[str, Any]:
     """Make an API request to the Brave Search API.
 
     Args:
@@ -113,7 +114,7 @@ async def _make_brave_api_request(query: str) -> Dict[str, Any]:
         )
 
 
-def _parse_brave_results(data: Dict[str, Any]) -> List[SearchResult]:
+def _parse_brave_results(data: dict[str, Any]) -> list[SearchResult]:
     """Parse raw Brave Search API results into SearchResult objects.
 
     Args:
@@ -125,7 +126,7 @@ def _parse_brave_results(data: Dict[str, Any]) -> List[SearchResult]:
     web_block = data.get("web", {}) if isinstance(data, dict) else {}
     raw_results = web_block.get("results", []) if isinstance(web_block, dict) else []
 
-    results: List[SearchResult] = []
+    results: list[SearchResult] = []
     for item in raw_results:
         if not isinstance(item, dict):
             continue
@@ -139,7 +140,7 @@ def _parse_brave_results(data: Dict[str, Any]) -> List[SearchResult]:
     return results
 
 
-def _format_search_results(results: List[SearchResult]) -> str:
+def _format_search_results(results: list[SearchResult]) -> str:
     """Format search results into a readable, indexed text block.
 
     Args:
@@ -221,7 +222,7 @@ async def perform_web_search_async(query: str) -> WebSearchContext:
     tasks = [_fetch_and_extract_page_content(r.url, client) for r in initial_results]
     contents = await asyncio.gather(*tasks)
 
-    enriched_results: List[SearchResult] = []
+    enriched_results: list[SearchResult] = []
     for i, r in enumerate(initial_results):
         content = contents[i]
         if content:
@@ -301,9 +302,7 @@ async def generate_search_query_from_llm(
     }
 
     logger.info("Generate search query start model=%s", model_name)
-    logger.debug(
-        "User message len=%d", len(user_message) if isinstance(user_message, str) else 0
-    )
+    logger.debug("User message len=%d", len(user_message) if isinstance(user_message, str) else 0)
     try:
         response = await client.chat.completions.create(**req)
         logger.info("LLM response for query generation is done with: %s", response)
@@ -368,12 +367,8 @@ async def handle_web_search(
         topics_to_search = [t for t in topics if t.needs_search][:3]
 
         if not topics_to_search:
-            logger.info(
-                "No topics require web search; falling back to single-query enrichment"
-            )
-            concise_query = await generate_search_query_from_llm(
-                user_query, model_name, client
-            )
+            logger.info("No topics require web search; falling back to single-query enrichment")
+            concise_query = await generate_search_query_from_llm(user_query, model_name, client)
             return await enhance_messages_with_web_search(req_messages, concise_query)
 
         async def _generate_query(topic_obj: Topic) -> TopicQuery | None:
@@ -391,15 +386,11 @@ async def handle_web_search(
 
         query_generation_tasks = [_generate_query(t) for t in topics_to_search]
         generated_results = await asyncio.gather(*query_generation_tasks)
-        topic_queries: List[TopicQuery] = [res for res in generated_results if res]
+        topic_queries: list[TopicQuery] = [res for res in generated_results if res]
 
         if not topic_queries:
-            logger.info(
-                "No valid topic queries generated; falling back to single query"
-            )
-            concise_query = await generate_search_query_from_llm(
-                user_query, model_name, client
-            )
+            logger.info("No valid topic queries generated; falling back to single query")
+            concise_query = await generate_search_query_from_llm(user_query, model_name, client)
             return await enhance_messages_with_web_search(req_messages, concise_query)
 
         async def _search(q: str) -> WebSearchContext:
@@ -412,9 +403,7 @@ async def handle_web_search(
         search_tasks = [_search(tq.query) for tq in topic_queries]
         contexts = await asyncio.gather(*search_tasks)
 
-        return await enhance_messages_with_multi_web_search(
-            req_messages, topic_queries, contexts
-        )
+        return await enhance_messages_with_multi_web_search(req_messages, topic_queries, contexts)
 
     except HTTPException:
         logger.exception("Web search provider error")
@@ -425,9 +414,7 @@ async def handle_web_search(
         return WebSearchEnhancedMessages(messages=req_messages.messages, sources=[])
 
 
-async def analyze_web_search_topics(
-    user_message: str, model_name: str, client: Any
-) -> List[Topic]:
+async def analyze_web_search_topics(user_message: str, model_name: str, client: Any) -> list[Topic]:
     """Use the LLM to identify topics and whether each needs web search.
 
     Returns a list of Pydantic Topic objects.
@@ -468,16 +455,16 @@ async def analyze_web_search_topics(
 
 async def enhance_messages_with_multi_web_search(
     req: ChatRequest,
-    topic_queries: List[TopicQuery],
-    contexts: List[WebSearchContext],
+    topic_queries: list[TopicQuery],
+    contexts: list[WebSearchContext],
 ) -> WebSearchEnhancedMessages:
     """Enhance messages with multiple topic-specific web search contexts."""
     if not topic_queries or not contexts:
         return WebSearchEnhancedMessages(messages=req.messages, sources=[])
 
     # Build a merged content block
-    sections: List[str] = []
-    all_sources: List[Source] = []
+    sections: list[str] = []
+    all_sources: list[Source] = []
 
     for idx, (topic_query, context) in enumerate(zip(topic_queries, contexts), start=1):
         topic = topic_query.topic.strip()

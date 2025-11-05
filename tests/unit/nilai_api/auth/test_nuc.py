@@ -1,7 +1,9 @@
-import pytest
 from unittest.mock import patch
-from nilai_api.auth.nuc import get_token_prompt_document
+
+import pytest
+
 from nilai_api.auth.common import PromptDocument
+from nilai_api.auth.nuc import get_token_prompt_document
 
 
 class TestNucAuthFunctions:

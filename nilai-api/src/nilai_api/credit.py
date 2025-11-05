@@ -1,18 +1,18 @@
+from collections.abc import Awaitable, Callable
 import logging
-from typing import Awaitable, Callable, Optional
-from fastapi import Request
 from typing import TypeAlias
-from pydantic import BaseModel
 
+from fastapi import Request
 from nilauth_credit_middleware import (
     CreditClientSingleton,
-    create_metering_dependency,
     UserIdExtractors,
+    create_metering_dependency,
 )
+from nuc.envelope import NucTokenEnvelope
+from pydantic import BaseModel
 
 from nilai_api.config import CONFIG
 
-from nuc.envelope import NucTokenEnvelope
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +47,9 @@ class LLMCost(BaseModel):
 
     @staticmethod
     def default() -> "LLMCost":
-        return LLMCost(
-            prompt_tokens_price=2.0, completion_tokens_price=2.0, web_search_cost=0.05
-        )
+        return LLMCost(prompt_tokens_price=2.0, completion_tokens_price=2.0, web_search_cost=0.05)
 
-    def total_cost(
-        self, prompt_tokens: int, completion_tokens: int, web_searches: int
-    ) -> float:
+    def total_cost(self, prompt_tokens: int, completion_tokens: int, web_searches: int) -> float:
         logger.info(" == Cost Summary == ")
         logger.info(
             f"Prompt Tokens: {prompt_tokens} cost: {self.prompt_tokens_price * prompt_tokens}"
@@ -61,9 +57,7 @@ class LLMCost(BaseModel):
         logger.info(
             f"Completion Tokens: {completion_tokens} cost: {self.completion_tokens_price * completion_tokens}"
         )
-        logger.info(
-            f"Web Searches: {web_searches} cost: {self.web_search_cost * web_searches}"
-        )
+        logger.info(f"Web Searches: {web_searches} cost: {self.web_search_cost * web_searches}")
         logger.info(
             f"Total Cost: {self.prompt_tokens_price * prompt_tokens + self.completion_tokens_price * completion_tokens + self.web_search_cost * web_searches}"
         )
@@ -106,18 +100,16 @@ CreditClientSingleton.configure(
 def credential_extractor() -> Callable[[Request], Awaitable[str]]:
     if CONFIG.auth.auth_strategy == "nuc":
         return from_nuc_bearer_root_token()
-    else:
-        extractor = UserIdExtractors.from_header("Authorization")
+    extractor = UserIdExtractors.from_header("Authorization")
 
-        async def wrapper(request: Request) -> str:
-            information = await extractor(request)
-            if information.startswith("Bearer "):
-                information = information[7:]
-                return information
-            else:
-                raise ValueError("Authorization header does not start with Bearer")
+    async def wrapper(request: Request) -> str:
+        information = await extractor(request)
+        if information.startswith("Bearer "):
+            information = information[7:]
+            return information
+        raise ValueError("Authorization header does not start with Bearer")
 
-        return wrapper
+    return wrapper
 
 
 def from_nuc_bearer_root_token() -> Callable[[Request], Awaitable[str]]:
@@ -143,7 +135,7 @@ def llm_cost_calculator(llm_cost_dict: LLMCostDict):
         model_name = getattr(request, "model", "default")
         llm_cost = llm_cost_dict.get(model_name, LLMCost.default())
         total_cost = 0.0
-        usage: Optional[LLMUsage] = response_data.get("usage", None)
+        usage: LLMUsage | None = response_data.get("usage")
         if usage is None:
             logger.error(f"Usage not found in response data: {response_data}")
             return total_cost

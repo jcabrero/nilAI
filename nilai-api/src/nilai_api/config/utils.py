@@ -1,24 +1,26 @@
+import json
 import os
-from typing import Dict, Any, Optional, Type, TypeVar, get_origin
-import yaml
+from typing import Any, TypeVar, get_origin
+
 from dotenv import load_dotenv
 from pydantic import BaseModel
-import json
+import yaml
+
 
 load_dotenv()
 
 T = TypeVar("T", bound=BaseModel)
 
 
-def load_config_from_yaml(config_path: str) -> Dict[str, Any]:
+def load_config_from_yaml(config_path: str) -> dict[str, Any]:
     """Load configuration from YAML file."""
     if os.path.exists(config_path):
-        with open(config_path, "r") as f:
+        with open(config_path) as f:
             return yaml.safe_load(f)
     return {}
 
 
-def get_nested_value(data: Dict[str, Any], key_path: str) -> Any:
+def get_nested_value(data: dict[str, Any], key_path: str) -> Any:
     """Get nested value from dict using dot notation."""
     value = data
     for key in key_path.split("."):
@@ -30,11 +32,11 @@ def get_nested_value(data: Dict[str, Any], key_path: str) -> Any:
 
 
 def create_config_model(
-    model_class: Type[T],
+    model_class: type[T],
     yaml_section: str,
-    config_data: Dict[str, Any],
+    config_data: dict[str, Any],
     env_prefix: str = "",
-    custom_env_mapping: Optional[Dict[str, str]] = None,
+    custom_env_mapping: dict[str, str] | None = None,
 ) -> T:
     """Create Pydantic model instance with YAML-first, env override approach."""
     # Get YAML section data
@@ -52,17 +54,12 @@ def create_config_model(
             env_keys = [custom_env_mapping[field_name]]
         else:
             # Use standard prefix logic
-            env_keys = [
-                f"{env_prefix}{field_name.upper()}"
-                if env_prefix
-                else field_name.upper()
-            ]
+            env_keys = [f"{env_prefix}{field_name.upper()}" if env_prefix else field_name.upper()]
 
         # Add special case for api_key -> BRAVE_SEARCH_API for backward compatibility
         if (
             field_name == "api_key"
-            and "BRAVE_SEARCH_API"
-            not in [custom_env_mapping.get(field_name, "")] + env_keys
+            and "BRAVE_SEARCH_API" not in [custom_env_mapping.get(field_name, "")] + env_keys
         ):
             env_keys.append("BRAVE_SEARCH_API")
 
@@ -100,7 +97,7 @@ def create_config_model(
 
 def get_required_env_var(name: str) -> str:
     """Get a required environment variable, raising an error if not set."""
-    value: Optional[str] = os.getenv(name, None)
+    value: str | None = os.getenv(name, None)
     if value is None:
         raise ValueError(f"Required environment variable {name} is not set")
     return value

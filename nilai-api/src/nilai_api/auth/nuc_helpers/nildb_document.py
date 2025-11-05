@@ -1,10 +1,11 @@
 from functools import lru_cache
-from typing import Optional
-from nuc.envelope import NucTokenEnvelope
 import logging
+from typing import Optional
+
+from nuc.envelope import NucTokenEnvelope
+from nuc.token import Did
 from pydantic import BaseModel
 
-from nuc.token import Did
 
 logger = logging.getLogger(__name__)
 

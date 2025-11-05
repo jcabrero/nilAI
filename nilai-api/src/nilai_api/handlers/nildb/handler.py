@@ -1,27 +1,24 @@
-from typing import Optional
-from nilai_api.config import CONFIG
+import datetime
 
-from secretvaults import SecretVaultBuilderClient, SecretVaultUserClient
-from secretvaults.common.keypair import Keypair
-from secretvaults.common.blindfold import BlindfoldFactoryConfig, BlindfoldOperation
-
-from secretvaults.common.utils import into_seconds_from_now
 from nuc.builder import NucTokenBuilder
 from nuc.token import Command, Did
+from secretvaults import SecretVaultBuilderClient, SecretVaultUserClient
+from secretvaults.common.blindfold import BlindfoldFactoryConfig, BlindfoldOperation
+from secretvaults.common.keypair import Keypair
 from secretvaults.common.nuc_cmd import NucCmd
 from secretvaults.common.types import Uuid
+from secretvaults.common.utils import into_seconds_from_now
 from secretvaults.dto.users import (
     ReadDataRequestParams,
 )
 
 from nilai_api.auth.common import PromptDocument
+from nilai_api.config import CONFIG
 from nilai_api.handlers.nildb.api_model import PromptDelegationToken
 
-import datetime
 
-
-BUILDER_CLIENT: Optional[SecretVaultBuilderClient] = None
-USER_CLIENT: Optional[SecretVaultUserClient] = None
+BUILDER_CLIENT: SecretVaultBuilderClient | None = None
+USER_CLIENT: SecretVaultUserClient | None = None
 
 
 async def create_builder_client():
@@ -44,9 +41,7 @@ async def create_builder_client():
     BUILDER_CLIENT = await SecretVaultBuilderClient.from_options(
         keypair=keypair,
         urls=urls,
-        blindfold=BlindfoldFactoryConfig(
-            operation=BlindfoldOperation.STORE, use_cluster_key=True
-        ),
+        blindfold=BlindfoldFactoryConfig(operation=BlindfoldOperation.STORE, use_cluster_key=True),
     )
 
     # Get root token for use in other functions
@@ -66,9 +61,7 @@ async def create_user_client() -> SecretVaultUserClient:
     USER_CLIENT = await SecretVaultUserClient.from_options(
         keypair=keypair,
         base_urls=CONFIG.nildb.nodes,
-        blindfold=BlindfoldFactoryConfig(
-            operation=BlindfoldOperation.STORE, use_cluster_key=True
-        ),
+        blindfold=BlindfoldFactoryConfig(operation=BlindfoldOperation.STORE, use_cluster_key=True),
     )
 
     return USER_CLIENT
@@ -124,9 +117,7 @@ async def get_prompt_from_nildb(prompt_document: PromptDocument) -> str:
     else:
         data_dict = dict(document_data) if document_data else {}
     if data_dict.get("owner", None) != str(prompt_document.owner_did):
-        raise ValueError(
-            "Non-owning entity trying to invoke access to a document resource"
-        )
+        raise ValueError("Non-owning entity trying to invoke access to a document resource")
 
     if "prompt" not in data_dict:
         raise ValueError("Couldn't find prompt field in document response from nilDB")

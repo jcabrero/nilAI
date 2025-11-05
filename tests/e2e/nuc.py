@@ -1,24 +1,22 @@
+from openai import DefaultHttpxClient
+
 from nilai_api.auth.nuc_helpers import (
     NilAuthPrivateKey,
 )
-
 from nilai_py import (
-    Client,
-    DelegationTokenServer,
-    DelegationServerConfig,
     AuthType,
+    Client,
+    DelegationServerConfig,
     DelegationTokenRequest,
     DelegationTokenResponse,
+    DelegationTokenServer,
     PromptDocumentInfo,
 )
-from openai import DefaultHttpxClient
 
 
 # These correspond to the key used to test with nilAuth. Otherwise the OWNER DID would not match the issuer
 DOCUMENT_ID = "bb93f3a4-ba4c-4e20-8f2e-c0650c75a372"
-DOCUMENT_OWNER_DID = (
-    "did:nil:030923f2e7120c50e42905b857ddd2947f6ecced6bb02aab64e63b28e9e2e06d10"
-)
+DOCUMENT_OWNER_DID = "did:nil:030923f2e7120c50e42905b857ddd2947f6ecced6bb02aab64e63b28e9e2e06d10"
 
 PRIVATE_KEY = "97f49889fceed88a9cdddb16a161d13f6a12307c2b39163f3c3c397c3c2d2434"  # Example private key for testing devnet
 
@@ -45,11 +43,7 @@ def get_nuc_client(
     """
     # We use a key that is not registered to nilauth-credit for the invalid delegation token
 
-    private_key = (
-        PRIVATE_KEY
-        if not create_invalid_delegation
-        else NilAuthPrivateKey().serialize()
-    )
+    private_key = PRIVATE_KEY if not create_invalid_delegation else NilAuthPrivateKey().serialize()
 
     config = DelegationServerConfig(
         expiration_time=expires_in if expires_in else 10 * 60 * 60,  # 10 hours

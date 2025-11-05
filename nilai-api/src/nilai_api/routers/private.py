@@ -1,15 +1,10 @@
 # Fast API and serving
+from base64 import b64encode
+from collections.abc import AsyncGenerator
 import json
 import logging
 import time
 import uuid
-from base64 import b64encode
-from typing import AsyncGenerator, Optional, Union, List, Tuple
-from nilai_api.attestation import get_attestation_report
-from nilai_api.credit import LLMMeter, LLMUsage
-from nilai_api.handlers.nilrag import handle_nilrag
-from nilai_api.handlers.web_search import handle_web_search
-from nilai_api.handlers.tools.tool_router import handle_tool_workflow
 
 from fastapi import (
     APIRouter,
@@ -17,17 +12,19 @@ from fastapi import (
     Body,
     Depends,
     HTTPException,
-    status,
     Request,
+    status,
 )
 from fastapi.responses import StreamingResponse
-from nilai_api.auth import get_auth_info, AuthenticationInfo
+from nilauth_credit_middleware import MeteringContext
+from openai import AsyncOpenAI
+
+from nilai_api.attestation import get_attestation_report
+from nilai_api.auth import AuthenticationInfo, get_auth_info
 from nilai_api.config import CONFIG
+from nilai_api.credit import LLMMeter, LLMUsage
 from nilai_api.crypto import sign_message
 from nilai_api.db.logs import QueryLogContext, QueryLogManager
-from nilai_api.rate_limiting import RateLimit
-from nilai_api.state import state
-
 from nilai_api.handlers.nildb.api_model import (
     PromptDelegationRequest,
     PromptDelegationToken,
@@ -36,20 +33,22 @@ from nilai_api.handlers.nildb.handler import (
     get_nildb_delegation_token,
     get_prompt_from_nildb,
 )
+from nilai_api.handlers.nilrag import handle_nilrag
+from nilai_api.handlers.tools.tool_router import handle_tool_workflow
+from nilai_api.handlers.web_search import handle_web_search
+from nilai_api.rate_limiting import RateLimit
+from nilai_api.state import state
 
 # Internal libraries
 from nilai_common import (
     AttestationReport,
     ChatRequest,
-    ModelMetadata,
     MessageAdapter,
+    ModelMetadata,
     SignedChatCompletion,
     Source,
     Usage,
 )
-
-from nilauth_credit_middleware import MeteringContext
-from openai import AsyncOpenAI
 
 
 logger = logging.getLogger(__name__)
@@ -69,7 +68,7 @@ async def get_prompt_store_delegation(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Server unable to produce delegation tokens: {str(e)}",
+            detail=f"Server unable to produce delegation tokens: {e!s}",
         )
 
 
@@ -87,9 +86,7 @@ async def get_usage(auth_info: AuthenticationInfo = Depends(get_auth_info)) -> U
     usage = await get_usage(user)
     ```
     """
-    user_usage: Optional[Usage] = await QueryLogManager.get_user_token_usage(
-        auth_info.user.user_id
-    )
+    user_usage: Usage | None = await QueryLogManager.get_user_token_usage(auth_info.user.user_id)
     if user_usage is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -126,7 +123,7 @@ async def get_attestation(
 @router.get("/v1/models", tags=["Model"])
 async def get_models(
     auth_info: AuthenticationInfo = Depends(get_auth_info),
-) -> List[ModelMetadata]:
+) -> list[ModelMetadata]:
     """
     List all available models in the system.
 
@@ -142,7 +139,7 @@ async def get_models(
     return [endpoint.metadata for endpoint in (await state.models).values()]
 
 
-async def chat_completion_concurrent_rate_limit(request: Request) -> Tuple[int, str]:
+async def chat_completion_concurrent_rate_limit(request: Request) -> tuple[int, str]:
     body = await request.json()
     try:
         chat_request = ChatRequest(**body)
@@ -172,9 +169,7 @@ async def chat_completion(
         ChatRequest(
             model="meta-llama/Llama-3.2-1B-Instruct",
             messages=[
-                MessageAdapter.new_message(
-                    role="system", content="You are a helpful assistant."
-                ),
+                MessageAdapter.new_message(role="system", content="You are a helpful assistant."),
                 MessageAdapter.new_message(role="user", content="What is your name?"),
             ],
         )
@@ -189,7 +184,7 @@ async def chat_completion(
     auth_info: AuthenticationInfo = Depends(get_auth_info),
     meter: MeteringContext = Depends(LLMMeter),
     log_ctx: QueryLogContext = Depends(QueryLogContext),
-) -> Union[SignedChatCompletion, StreamingResponse]:
+) -> SignedChatCompletion | StreamingResponse:
     """
     Generate a chat completion response from the AI model.
 
@@ -274,9 +269,7 @@ async def chat_completion(
 
         has_multimodal = req.has_multimodal_content()
         logger.info(f"[chat] has_multimodal: {has_multimodal}")
-        if has_multimodal and (
-            not endpoint.metadata.multimodal_support or req.web_search
-        ):
+        if has_multimodal and (not endpoint.metadata.multimodal_support or req.web_search):
             raise HTTPException(
                 status_code=400,
                 detail="Model does not support multimodal content, remove image inputs from request",
@@ -299,16 +292,14 @@ async def chat_completion(
         client = AsyncOpenAI(base_url=model_url, api_key="<not-needed>")
         if auth_info.prompt_document:
             try:
-                nildb_prompt: str = await get_prompt_from_nildb(
-                    auth_info.prompt_document
-                )
+                nildb_prompt: str = await get_prompt_from_nildb(auth_info.prompt_document)
                 req.messages.insert(
                     0, MessageAdapter.new_message(role="system", content=nildb_prompt)
                 )
             except Exception as e:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Unable to extract prompt from nilDB: {str(e)}",
+                    detail=f"Unable to extract prompt from nilDB: {e!s}",
                 )
 
         if req.nilrag:
@@ -320,7 +311,7 @@ async def chat_completion(
             )
 
         messages = req.messages
-        sources: Optional[List[Source]] = None
+        sources: list[Source] | None = None
 
         if req.web_search:
             logger.info(f"[chat] web_search start request_id={request_id}")
@@ -372,9 +363,7 @@ async def chat_completion(
                         payload = chunk.model_dump(exclude_unset=True)
 
                         if chunk.usage is not None and sources:
-                            payload["sources"] = [
-                                s.model_dump(mode="json") for s in sources
-                            ]
+                            payload["sources"] = [s.model_dump(mode="json") for s in sources]
 
                         yield f"data: {json.dumps(payload)}\n\n"
 
@@ -405,9 +394,7 @@ async def chat_completion(
                     )
 
                 except Exception as e:
-                    logger.error(
-                        "[chat] stream error request_id=%s error=%s", request_id, e
-                    )
+                    logger.error("[chat] stream error request_id=%s error=%s", request_id, e)
                     log_ctx.set_error(error_code=500, error_message=str(e))
                     await log_ctx.commit()
                     yield f"data: {json.dumps({'error': 'stream_failed', 'message': str(e)})}\n\n"
@@ -474,9 +461,7 @@ async def chat_completion(
 
             model_response.usage.prompt_tokens = total_prompt_tokens
             model_response.usage.completion_tokens = total_completion_tokens
-            model_response.usage.total_tokens = (
-                total_prompt_tokens + total_completion_tokens
-            )
+            model_response.usage.total_tokens = total_prompt_tokens + total_completion_tokens
 
         # Update token usage in DB
         meter.set_response(

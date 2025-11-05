@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import signal
-from typing import List, Set
 
 import httpx
 
@@ -15,10 +14,11 @@ from nilai_common import (
 )
 from nilai_common.config import to_bool
 
+
 logger = logging.getLogger(__name__)
 
 
-def _parse_csv(value: str) -> List[str]:
+def _parse_csv(value: str) -> list[str]:
     """Parse comma-separated string into list of stripped values."""
     return [item.strip() for item in value.split(",") if item.strip()]
 
@@ -29,7 +29,7 @@ async def _fetch_model_ids(
     timeout: float,
     retries: int,
     delay: float,
-) -> List[str]:
+) -> list[str]:
     """Fetch available model IDs from LMStudio API with retry logic."""
     attempt = 0
 
@@ -54,9 +54,7 @@ async def _fetch_model_ids(
                         ", ".join(models),
                     )
                     return models
-                logger.warning(
-                    "Received empty model list from %s%s, retrying", api_base, endpoint
-                )
+                logger.warning("Received empty model list from %s%s, retrying", api_base, endpoint)
         except Exception as exc:
             logger.warning(
                 "Unable to fetch LMStudio models from %s%s: %s",
@@ -67,9 +65,7 @@ async def _fetch_model_ids(
 
         attempt += 1
         if retries != -1 and attempt >= retries:
-            raise RuntimeError(
-                f"Failed to discover LMStudio models from {api_base}{endpoint}"
-            )
+            raise RuntimeError(f"Failed to discover LMStudio models from {api_base}{endpoint}")
         await asyncio.sleep(delay)
 
 
@@ -82,9 +78,7 @@ async def _announce_model(
     prefix: str,
 ):
     """Register and maintain a model announcement in Redis."""
-    discovery = ModelServiceDiscovery(
-        host=discovery_host, port=discovery_port, lease_ttl=lease_ttl
-    )
+    discovery = ModelServiceDiscovery(host=discovery_host, port=discovery_port, lease_ttl=lease_ttl)
     await discovery.initialize()
 
     endpoint = ModelEndpoint(url=base_url.rstrip("/"), metadata=metadata)
@@ -121,10 +115,10 @@ def _create_metadata(
     license_name: str,
     description_template: str,
     source_template: str,
-    supported_features: List[str],
-    tool_models: Set[str],
+    supported_features: list[str],
+    tool_models: set[str],
     tool_default: bool,
-    multimodal_models: Set[str],
+    multimodal_models: set[str],
     multimodal_default: bool,
 ) -> ModelMetadata:
     """Create ModelMetadata for a given model ID."""
@@ -147,9 +141,7 @@ async def main():
     logging.basicConfig(level=logging.INFO)
 
     # Load configuration from environment
-    api_base = os.getenv(
-        "LMSTUDIO_API_BASE", f"http://{SETTINGS.host}:{SETTINGS.port}"
-    ).rstrip("/")
+    api_base = os.getenv("LMSTUDIO_API_BASE", f"http://{SETTINGS.host}:{SETTINGS.port}").rstrip("/")
     models_endpoint = os.getenv("LMSTUDIO_MODELS_ENDPOINT", "/v1/models")
     registration_url = os.getenv("LMSTUDIO_REGISTRATION_URL", api_base).rstrip("/")
     lease_ttl = int(os.getenv("LMSTUDIO_LEASE_TTL", "60"))
@@ -190,9 +182,7 @@ async def main():
     description_template = os.getenv(
         "LMSTUDIO_MODEL_DESCRIPTION_TEMPLATE", "LMStudio served model {model_id}"
     )
-    source_template = os.getenv(
-        "LMSTUDIO_MODEL_SOURCE_TEMPLATE", "lmstudio://{model_id}"
-    )
+    source_template = os.getenv("LMSTUDIO_MODEL_SOURCE_TEMPLATE", "lmstudio://{model_id}")
 
     logger.info(
         "Announcing LMStudio models %s via %s with Redis at %s:%s",
@@ -243,9 +233,7 @@ async def main():
     wait_task = asyncio.create_task(stop_event.wait())
     announcer_group = asyncio.gather(*tasks, return_exceptions=True)
 
-    done, _ = await asyncio.wait(
-        {wait_task, announcer_group}, return_when=asyncio.FIRST_COMPLETED
-    )
+    done, _ = await asyncio.wait({wait_task, announcer_group}, return_when=asyncio.FIRST_COMPLETED)
 
     # Handle shutdown
     if wait_task in done:
@@ -260,9 +248,7 @@ async def main():
         wait_task.cancel()
         results = await announcer_group
         for result in results:
-            if isinstance(result, Exception) and not isinstance(
-                result, asyncio.CancelledError
-            ):
+            if isinstance(result, Exception) and not isinstance(result, asyncio.CancelledError):
                 raise result
 
 

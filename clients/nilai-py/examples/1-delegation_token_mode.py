@@ -1,14 +1,14 @@
+from config import API_KEY
 from openai import DefaultHttpxClient
+
 from nilai_py import (
-    Client,
-    DelegationTokenServer,
     AuthType,
+    Client,
     DelegationServerConfig,
     DelegationTokenRequest,
     DelegationTokenResponse,
+    DelegationTokenServer,
 )
-
-from config import API_KEY
 
 
 def main():
@@ -52,9 +52,7 @@ def main():
         # >>> Client uses the delegation token to make a request
         response = client.chat.completions.create(
             model="openai/gpt-oss-20b",
-            messages=[
-                {"role": "user", "content": "Hello! Can you help me with something?"}
-            ],
+            messages=[{"role": "user", "content": "Hello! Can you help me with something?"}],
         )
 
         print(f"Response {i}: {response.choices[0].message.content}")

@@ -1,17 +1,16 @@
-from datetime import datetime, timezone
-from typing import Optional, Tuple
-from nuc.validate import NucTokenValidator, ValidationParameters, InvocationRequirement
-from nuc.envelope import NucTokenEnvelope
-from nuc.token import Did, NucToken, Command
+from datetime import UTC, datetime
 from functools import lru_cache
-from nilai_api.state import state
-from nilai_api.auth.common import AuthenticationError
-
-
-from nilai_api.auth.nuc_helpers.usage import TokenRateLimits
-from nilai_api.auth.nuc_helpers.nildb_document import PromptDocument
-
 import logging
+
+from nuc.envelope import NucTokenEnvelope
+from nuc.token import Command, Did, NucToken
+from nuc.validate import InvocationRequirement, NucTokenValidator, ValidationParameters
+
+from nilai_api.auth.common import AuthenticationError
+from nilai_api.auth.nuc_helpers.nildb_document import PromptDocument
+from nilai_api.auth.nuc_helpers.usage import TokenRateLimits
+from nilai_api.state import state
+
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +58,7 @@ def check_is_nilai_subcommand(nuc_token_envelope: NucTokenEnvelope) -> bool:
     return command.is_attenuation_of(NILAI_BASE_COMMAND)
 
 
-def validate_nuc(nuc_token: str) -> Tuple[str, str]:
+def validate_nuc(nuc_token: str) -> tuple[str, str]:
     """
     Validate a NUC token
 
@@ -79,9 +78,7 @@ def validate_nuc(nuc_token: str) -> Tuple[str, str]:
         )
         raise AuthenticationError("NUC token namespace is not a /nil/ai attenuation")
 
-    get_validator().validate(
-        nuc_token_envelope, context={}, parameters=get_validation_parameters()
-    )
+    get_validator().validate(nuc_token_envelope, context={}, parameters=get_validation_parameters())
     token: NucToken = nuc_token_envelope.token.token
 
     # Validate the
@@ -93,7 +90,7 @@ def validate_nuc(nuc_token: str) -> Tuple[str, str]:
     return str(subscription_holder), str(user)
 
 
-def get_token_rate_limit(nuc_token: str) -> Optional[TokenRateLimits]:
+def get_token_rate_limit(nuc_token: str) -> TokenRateLimits | None:
     """
     Get the rate limit for the NUC token
 
@@ -112,12 +109,12 @@ def get_token_rate_limit(nuc_token: str) -> Optional[TokenRateLimits]:
     for limit in token_rate_limits.limits:
         if limit.usage_limit is None:
             raise AuthenticationError("Token has no usage limit")
-        if limit.expires_at < datetime.now(timezone.utc):
+        if limit.expires_at < datetime.now(UTC):
             raise AuthenticationError("Token has expired")
 
     return token_rate_limits
 
 
-def get_token_prompt_document(nuc_token: str) -> Optional[PromptDocument]:
+def get_token_prompt_document(nuc_token: str) -> PromptDocument | None:
     prompt_document = PromptDocument.from_token(nuc_token)
     return prompt_document

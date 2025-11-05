@@ -18,20 +18,22 @@ from external dependencies like NilauthClient and cryptographic operations.
 """
 
 import datetime
-import pytest
 from unittest.mock import Mock, patch
-from nilai_py.server import DelegationTokenServer
+
+from nuc.envelope import NucTokenEnvelope
+from nuc.nilauth import BlindModule
+from nuc.token import NucToken
+import pytest
+
+from nilai_py.common import is_expired
 from nilai_py.niltypes import (
+    DefaultDelegationTokenServerConfig,
+    DelegationServerConfig,
     DelegationTokenRequest,
     DelegationTokenResponse,
-    DelegationServerConfig,
-    DefaultDelegationTokenServerConfig,
     RequestType,
 )
-from nilai_py.common import is_expired
-from nuc.envelope import NucTokenEnvelope
-from nuc.token import NucToken
-from nuc.nilauth import BlindModule
+from nilai_py.server import DelegationTokenServer
 
 
 class TestDelegationTokenServer:
@@ -66,9 +68,7 @@ class TestDelegationTokenServer:
         envelope = Mock(spec=NucTokenEnvelope)
         token_wrapper = Mock()
         token = Mock(spec=NucToken)
-        token.expires_at = datetime.datetime.now(
-            datetime.timezone.utc
-        ) + datetime.timedelta(hours=1)
+        token.expires_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1)
         token_wrapper.token = token
         envelope.token = token_wrapper
         return envelope
@@ -79,9 +79,7 @@ class TestDelegationTokenServer:
         envelope = Mock(spec=NucTokenEnvelope)
         token_wrapper = Mock()
         token = Mock(spec=NucToken)
-        token.expires_at = datetime.datetime.now(
-            datetime.timezone.utc
-        ) - datetime.timedelta(hours=1)
+        token.expires_at = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1)
         token_wrapper.token = token
         envelope.token = token_wrapper
         return envelope
@@ -106,9 +104,7 @@ class TestDelegationTokenServer:
         with pytest.raises(ValueError):
             DelegationTokenServer("invalid_hex_key")
 
-    def test_is_expired_with_expired_token(
-        self, private_key_hex, expired_token_envelope
-    ):
+    def test_is_expired_with_expired_token(self, private_key_hex, expired_token_envelope):
         """Test _is_expired method with an expired token."""
         assert is_expired(expired_token_envelope) is True
 
@@ -270,20 +266,14 @@ class TestDelegationTokenServer:
         server = DelegationTokenServer(private_key_hex)
         server._root_token_envelope = mock_token_envelope
 
-        result = server.create_delegation_token(
-            delegation_request, config_override=custom_config
-        )
+        result = server.create_delegation_token(delegation_request, config_override=custom_config)
 
         assert isinstance(result, DelegationTokenResponse)
 
         # Verify that the custom config values are used
-        mock_builder.meta.assert_called_once_with(
-            {"usage_limit": custom_config.token_max_uses}
-        )
+        mock_builder.meta.assert_called_once_with({"usage_limit": custom_config.token_max_uses})
 
-    def test_create_delegation_token_invalid_public_key(
-        self, private_key_hex, mock_token_envelope
-    ):
+    def test_create_delegation_token_invalid_public_key(self, private_key_hex, mock_token_envelope):
         """Test delegation token creation with invalid public key."""
         server = DelegationTokenServer(private_key_hex)
         server._root_token_envelope = mock_token_envelope
@@ -294,9 +284,7 @@ class TestDelegationTokenServer:
             server.create_delegation_token(invalid_request)
 
     @patch("nilai_py.server.NilauthClient")
-    def test_nilauth_client_error_handling(
-        self, mock_nilauth_client_class, private_key_hex
-    ):
+    def test_nilauth_client_error_handling(self, mock_nilauth_client_class, private_key_hex):
         """Test error handling when NilauthClient fails."""
         # Setup mock to raise an exception
         mock_client = Mock()
@@ -325,9 +313,7 @@ class TestDelegationTokenServer:
     ):
         """Test that expiration time is calculated correctly."""
         # Setup datetime mock
-        fixed_now = datetime.datetime(
-            2024, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc
-        )
+        fixed_now = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
         mock_datetime_module.datetime.now.return_value = fixed_now
         mock_datetime_module.timedelta = datetime.timedelta
         mock_datetime_module.timezone = datetime.timezone
@@ -349,7 +335,5 @@ class TestDelegationTokenServer:
             server.create_delegation_token(delegation_request)
 
             # Verify expires_at was called with correct expiration time
-            expected_expiration = fixed_now + datetime.timedelta(
-                seconds=60
-            )  # Default expiration
+            expected_expiration = fixed_now + datetime.timedelta(seconds=60)  # Default expiration
             mock_builder.expires_at.assert_called_once_with(expected_expiration)

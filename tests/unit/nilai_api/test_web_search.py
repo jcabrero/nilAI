@@ -1,14 +1,16 @@
-import pytest
 from unittest.mock import patch
+
 from fastapi import HTTPException
+import pytest
+
 from nilai_api.handlers.web_search import (
-    perform_web_search_async,
     enhance_messages_with_web_search,
+    perform_web_search_async,
 )
-from nilai_common import MessageAdapter, ChatRequest
+from nilai_common import ChatRequest, MessageAdapter
 from nilai_common.api_model import (
-    WebSearchContext,
     Source,
+    WebSearchContext,
 )
 
 
@@ -44,15 +46,9 @@ async def test_perform_web_search_async_success():
         assert ctx.sources is not None
         assert len(ctx.sources) == 2
         assert ctx.sources[0].source == "https://example.com/ai1"
-        assert (
-            ctx.sources[0].content
-            == "OpenAI announces GPT-5 with improved capabilities."
-        )
+        assert ctx.sources[0].content == "OpenAI announces GPT-5 with improved capabilities."
         assert ctx.sources[1].source == "https://example.com/ai2"
-        assert (
-            ctx.sources[1].content
-            == "New neural network architecture improves robot learning."
-        )
+        assert ctx.sources[1].content == "New neural network architecture improves robot learning."
 
 
 @pytest.mark.asyncio
@@ -122,27 +118,20 @@ async def test_perform_web_search_async_concurrent_queries():
         assert results[0].sources is not None
         assert len(results[0].sources) == 1
         assert results[0].sources[0].source == "https://example.com/ai-news"
-        assert (
-            results[0].sources[0].content
-            == "Latest developments in artificial intelligence."
-        )
+        assert results[0].sources[0].content == "Latest developments in artificial intelligence."
 
         # Check second result
         assert results[1].sources is not None
         assert len(results[1].sources) == 1
         assert results[1].sources[0].source == "https://example.com/ml"
-        assert (
-            results[1].sources[0].content == "Advances in machine learning algorithms."
-        )
+        assert results[1].sources[0].content == "Advances in machine learning algorithms."
 
 
 @pytest.mark.asyncio
 async def test_enhance_messages_with_web_search():
     """Test message enhancement with web search results and source validation"""
     original_messages = [
-        MessageAdapter.new_message(
-            role="system", content="You are a helpful assistant"
-        ),
+        MessageAdapter.new_message(role="system", content="You are a helpful assistant"),
         MessageAdapter.new_message(role="user", content="What is the latest AI news?"),
     ]
     req = ChatRequest(model="dummy", messages=original_messages)
@@ -150,9 +139,7 @@ async def test_enhance_messages_with_web_search():
     with patch("nilai_api.handlers.web_search.perform_web_search_async") as mock_search:
         mock_search.return_value = WebSearchContext(
             prompt="[1] Latest AI Developments\nURL: https://example.com\nSnippet: OpenAI announces GPT-5",
-            sources=[
-                Source(source="https://example.com", content="OpenAI announces GPT-5")
-            ],
+            sources=[Source(source="https://example.com", content="OpenAI announces GPT-5")],
         )
 
         enhanced = await enhance_messages_with_web_search(req, "AI news")

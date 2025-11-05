@@ -14,6 +14,7 @@ from nilai_common import (
     ModelServiceDiscovery,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,10 +49,7 @@ async def get_metadata():
             else:
                 logger.warning(f"Failed to fetch model metadata from {url}: {e}")
             current_retries += 1
-            if (
-                MODEL_SETTINGS.num_retries != -1
-                and current_retries >= MODEL_SETTINGS.num_retries
-            ):
+            if MODEL_SETTINGS.num_retries != -1 and current_retries >= MODEL_SETTINGS.num_retries:
                 raise e
             await asyncio.sleep(MODEL_SETTINGS.timeout)
 
@@ -96,9 +94,7 @@ async def main():
 
     # Fetch metadata and create endpoint
     metadata = await get_metadata()
-    model_endpoint = ModelEndpoint(
-        url=f"http://{SETTINGS.host}:{SETTINGS.port}", metadata=metadata
-    )
+    model_endpoint = ModelEndpoint(url=f"http://{SETTINGS.host}:{SETTINGS.port}", metadata=metadata)
 
     # Create service task
     service_task = asyncio.create_task(run_service(discovery_service, model_endpoint))
@@ -116,9 +112,7 @@ async def main():
     # Wait for either shutdown signal or service completion
     wait_task = asyncio.create_task(stop_event.wait())
 
-    done, _ = await asyncio.wait(
-        {wait_task, service_task}, return_when=asyncio.FIRST_COMPLETED
-    )
+    done, _ = await asyncio.wait({wait_task, service_task}, return_when=asyncio.FIRST_COMPLETED)
 
     # Handle shutdown
     if wait_task in done:

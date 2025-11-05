@@ -14,9 +14,10 @@ It executes docker compose -f docker-compose.yml -f docker-compose.dev.yml -f do
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
-import shutil
+
 import yaml
 
 
@@ -37,11 +38,10 @@ def find_docker_compose_command():
         == 0
     ):
         return "docker compose"
-    elif shutil.which("docker-compose"):
+    if shutil.which("docker-compose"):
         return "docker-compose"
-    else:
-        print("Error: Neither 'docker compose' nor 'docker-compose' are available")
-        sys.exit(1)
+    print("Error: Neither 'docker compose' nor 'docker-compose' are available")
+    sys.exit(1)
 
 
 def parse_arguments():
@@ -63,12 +63,8 @@ Examples:
         """,
     )
 
-    parser.add_argument(
-        "--dev", action="store_true", help="Include docker-compose.dev.yml"
-    )
-    parser.add_argument(
-        "--prod", action="store_true", help="Include docker-compose.prod.yml"
-    )
+    parser.add_argument("--dev", action="store_true", help="Include docker-compose.dev.yml")
+    parser.add_argument("--prod", action="store_true", help="Include docker-compose.prod.yml")
     parser.add_argument(
         "--testnet",
         action="store_true",
@@ -179,7 +175,7 @@ def apply_image_substitutions(output_file, image_substitutions):
     if not image_substitutions:
         return
 
-    with open(output_file, "r") as f:
+    with open(output_file) as f:
         content = f.read()
 
     for old_image, new_image in image_substitutions:
@@ -194,7 +190,7 @@ def restore_files_variable(output_file, files_placeholder):
     """Replace the FILES placeholder with ${FILES}"""
     print("Restoring ${FILES} variable...")
 
-    with open(output_file, "r") as f:
+    with open(output_file) as f:
         content = f.read()
 
     content = content.replace(files_placeholder, "$FILES")
@@ -208,15 +204,11 @@ def restore_files_variable(output_file, files_placeholder):
 def process_compose_yaml(output_file, preserve_volumes=False):
     """Process the compose YAML file to remove volumes and convert bind mount formats"""
     if preserve_volumes:
-        print(
-            "Processing compose YAML for bind mount conversions (preserving volumes)..."
-        )
+        print("Processing compose YAML for bind mount conversions (preserving volumes)...")
     else:
-        print(
-            "Processing compose YAML for volume removal and bind mount conversions..."
-        )
+        print("Processing compose YAML for volume removal and bind mount conversions...")
 
-    with open(output_file, "r") as f:
+    with open(output_file) as f:
         content = f.read()
 
     try:
@@ -231,9 +223,7 @@ def process_compose_yaml(output_file, preserve_volumes=False):
         # Process service volume mounts - remove volume mounts, convert bind mounts
         if "services" in compose_data:
             for service_name, service_config in compose_data["services"].items():
-                if "volumes" in service_config and isinstance(
-                    service_config["volumes"], list
-                ):
+                if "volumes" in service_config and isinstance(service_config["volumes"], list):
                     new_volumes = []
                     for volume in service_config["volumes"]:
                         if isinstance(volume, dict):
@@ -277,26 +267,24 @@ def process_compose_yaml(output_file, preserve_volumes=False):
                                 ):
                                     # It's a bind mount (absolute path, relative path, or variable)
                                     new_volumes.append(volume)
-                                else:
-                                    if preserve_volumes:
-                                        # Keep volume mount when preserving volumes
-                                        new_volumes.append(volume)
-                                    else:
-                                        # It's a volume mount (named volume)
-                                        print(
-                                            f"Removing volume mount from service {service_name}: {volume}"
-                                        )
-                                        continue
-                            else:
-                                if preserve_volumes:
+                                elif preserve_volumes:
                                     # Keep volume mount when preserving volumes
                                     new_volumes.append(volume)
                                 else:
-                                    # Single name without colon - likely a volume mount
+                                    # It's a volume mount (named volume)
                                     print(
                                         f"Removing volume mount from service {service_name}: {volume}"
                                     )
                                     continue
+                            elif preserve_volumes:
+                                # Keep volume mount when preserving volumes
+                                new_volumes.append(volume)
+                            else:
+                                # Single name without colon - likely a volume mount
+                                print(
+                                    f"Removing volume mount from service {service_name}: {volume}"
+                                )
+                                continue
                     if new_volumes:
                         service_config["volumes"] = new_volumes
                     else:
@@ -304,9 +292,7 @@ def process_compose_yaml(output_file, preserve_volumes=False):
 
         # Write back to file with proper YAML formatting
         with open(output_file, "w") as f:
-            yaml.dump(
-                compose_data, f, default_flow_style=False, indent=2, sort_keys=False
-            )
+            yaml.dump(compose_data, f, default_flow_style=False, indent=2, sort_keys=False)
 
         print("Completed YAML processing")
 
@@ -323,7 +309,7 @@ def make_paths_portable(output_file):
 
     current_dir = os.getcwd()
 
-    with open(output_file, "r") as f:
+    with open(output_file) as f:
         content = f.read()
 
     # Convert absolute paths to relative paths in bind mounts
@@ -363,9 +349,7 @@ def main():
     # Build config command with optional flags
     config_cmd = ["config"]
     # Use --no-path-resolution if no_portable=False and docker compose (v2) is available
-    use_no_path_resolution = (
-        not args.no_portable and docker_compose_cmd == "docker compose"
-    )
+    use_no_path_resolution = not args.no_portable and docker_compose_cmd == "docker compose"
     if use_no_path_resolution:
         config_cmd.append("--no-path-resolution")
 

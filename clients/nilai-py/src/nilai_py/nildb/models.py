@@ -4,11 +4,11 @@ Common Pydantic models for nildb_wrapper package.
 This module provides base models and common types used across all modules.
 """
 
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, Any, Dict, Union
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field
 from secretvaults import SecretVaultUserClient
 from secretvaults.common.keypair import Keypair
 
@@ -25,8 +25,8 @@ class BaseResult(BaseModel):
     )
 
     success: bool
-    error: Optional[Union[str, Exception]] = None
-    message: Optional[str] = None
+    error: str | Exception | None = None
+    message: str | None = None
 
 
 class PromptDelegationToken(BaseModel):
@@ -41,12 +41,10 @@ class PromptDelegationToken(BaseModel):
 class TimestampedModel(BaseModel):
     """Base model with timestamp fields"""
 
-    model_config = ConfigDict(
-        extra="allow", validate_assignment=True, populate_by_name=True
-    )
+    model_config = ConfigDict(extra="allow", validate_assignment=True, populate_by_name=True)
 
-    created_at: Optional[datetime] = Field(default_factory=datetime.now)
-    updated_at: Optional[datetime] = None
+    created_at: datetime | None = Field(default_factory=datetime.now)
+    updated_at: datetime | None = None
 
 
 class KeyData(TimestampedModel):
@@ -54,14 +52,14 @@ class KeyData(TimestampedModel):
 
     type: str
     key: str
-    name: Optional[str] = None
+    name: str | None = None
 
     # For public keys
-    did: Optional[str] = None
-    private_key_file: Optional[str] = None
+    did: str | None = None
+    private_key_file: str | None = None
 
     # For private keys
-    public_key_file: Optional[str] = None
+    public_key_file: str | None = None
 
 
 class KeypairInfo(BaseModel):
@@ -70,8 +68,8 @@ class KeypairInfo(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     private_key_file: str
-    public_key_file: Optional[str] = None
-    created_at: Optional[str] = None
+    public_key_file: str | None = None
+    created_at: str | None = None
     name: str = "unnamed"
     did: str = "unknown"
 
@@ -80,31 +78,31 @@ class KeypairInfo(BaseModel):
 class UserSetupResult(BaseResult):
     """Result of user setup operation"""
 
-    user_client: Optional[SecretVaultUserClient] = None
-    keypair: Optional[Keypair] = None
-    keys_saved_to: Optional[Dict[str, str]] = None
+    user_client: SecretVaultUserClient | None = None
+    keypair: Keypair | None = None
+    keys_saved_to: dict[str, str] | None = None
 
 
 # Collection module models
 class CollectionResult(BaseResult):
     """Result of collection operations"""
 
-    data: Optional[Any] = None
+    data: Any | None = None
 
 
 class CollectionCreationResult(BaseResult):
     """Result of collection creation"""
 
-    collection_id: Optional[str] = None
-    collection_name: Optional[str] = None
-    collection_type: Optional[str] = None
+    collection_id: str | None = None
+    collection_name: str | None = None
+    collection_type: str | None = None
 
 
 # Document module models
 class OperationResult(BaseResult):
     """Result of document operations"""
 
-    data: Optional[Any] = None
+    data: Any | None = None
 
 
 class DocumentReference(BaseModel):
@@ -139,7 +137,7 @@ class RegistrationResult(BaseResult):
     """Result of builder registration"""
 
     status: RegistrationStatus
-    response: Optional[Any] = None
+    response: Any | None = None
 
 
 class TokenData(TimestampedModel):

@@ -1,14 +1,14 @@
-from typing import Optional, Dict, Any
+from typing import Any
 
 from secretvaults import SecretVaultUserClient
+from secretvaults.common.types import Did, Uuid
+from secretvaults.dto.data import CreateOwnedDataRequest
 from secretvaults.dto.users import (
     AclDto,
-    UpdateUserDataRequest,
-    ReadDataRequestParams,
     DeleteDocumentRequestParams,
+    ReadDataRequestParams,
+    UpdateUserDataRequest,
 )
-from secretvaults.dto.data import CreateOwnedDataRequest
-from secretvaults.common.types import Uuid, Did
 
 from nilai_py.nildb.models import OperationResult
 
@@ -20,9 +20,7 @@ async def list_data_references_core(
     try:
         references_response = await user_client.list_data_references()
         if not references_response:
-            return OperationResult(
-                success=False, message="No data references available"
-            )
+            return OperationResult(success=False, message="No data references available")
 
         if not hasattr(references_response, "data") or not references_response.data:
             return OperationResult(success=False, message="No data references found")
@@ -37,7 +35,7 @@ async def read_document_core(
     user_client: SecretVaultUserClient,
     collection_id: str,
     document_id: str,
-    relevant_user: Optional[str] = None,
+    relevant_user: str | None = None,
 ) -> OperationResult:
     """Read a specific document - core functionality"""
     try:
@@ -76,18 +74,13 @@ async def delete_document_core(
         delete_response = await user_client.delete_data(delete_params)
 
         if delete_response:
-            node_count = (
-                len(delete_response) if hasattr(delete_response, "__len__") else 1
-            )
+            node_count = len(delete_response) if hasattr(delete_response, "__len__") else 1
             return OperationResult(
                 success=True,
                 data=delete_response,
                 message=f"Deleted from {node_count} node(s)",
             )
-        else:
-            return OperationResult(
-                success=False, message="No response from delete operation"
-            )
+        return OperationResult(success=False, message="No response from delete operation")
 
     except Exception as e:
         return OperationResult(success=False, error=e)
@@ -97,7 +90,7 @@ async def update_document_core(
     user_client: SecretVaultUserClient,
     collection_id: str,
     document_id: str,
-    update_data: Dict,
+    update_data: dict,
 ) -> OperationResult:
     """Update a specific document - core functionality"""
     try:
@@ -116,20 +109,14 @@ async def update_document_core(
                     break
 
             if has_errors:
-                return OperationResult(
-                    success=False, message="Update failed on some nodes"
-                )
-            else:
-                node_count = len(update_response.root)  # pyright: ignore[reportAttributeAccessIssue]
-                return OperationResult(
-                    success=True,
-                    data=update_response,
-                    message=f"Updated on {node_count} node(s)",
-                )
-        else:
+                return OperationResult(success=False, message="Update failed on some nodes")
+            node_count = len(update_response.root)  # pyright: ignore[reportAttributeAccessIssue]
             return OperationResult(
-                success=False, message="No response from update operation"
+                success=True,
+                data=update_response,
+                message=f"Updated on {node_count} node(s)",
             )
+        return OperationResult(success=False, message="No response from update operation")
 
     except Exception as e:
         return OperationResult(success=False, error=e)
@@ -138,7 +125,7 @@ async def update_document_core(
 async def create_document_core(
     user_client: SecretVaultUserClient,
     collection_id: str,
-    data: Dict[str, Any],
+    data: dict[str, Any],
     delegation_token: str,
     builder_did: str,
 ) -> OperationResult:
@@ -164,12 +151,8 @@ async def create_document_core(
         if hasattr(create_response, "root"):
             for _, response in create_response.root.items():  # pyright: ignore[reportAttributeAccessIssue]
                 if hasattr(response, "data"):
-                    created_count = (
-                        len(response.data.created) if response.data.created else 0
-                    )
-                    error_count = (
-                        len(response.data.errors) if response.data.errors else 0
-                    )
+                    created_count = len(response.data.created) if response.data.created else 0
+                    error_count = len(response.data.errors) if response.data.errors else 0
                     total_created += created_count
                     total_errors += error_count
 
@@ -178,17 +161,13 @@ async def create_document_core(
                     success=False,
                     message=f"Created {total_created} documents but had {total_errors} errors",
                 )
-            else:
-                node_count = len(create_response.root)  # pyright: ignore[reportAttributeAccessIssue]
-                return OperationResult(
-                    success=True,
-                    data=create_response,
-                    message=f"Created document in {total_created} instances across {node_count} node(s)",
-                )
-        else:
+            node_count = len(create_response.root)  # pyright: ignore[reportAttributeAccessIssue]
             return OperationResult(
-                success=False, message="No response from create operation"
+                success=True,
+                data=create_response,
+                message=f"Created document in {total_created} instances across {node_count} node(s)",
             )
+        return OperationResult(success=False, message="No response from create operation")
 
     except Exception as e:
         return OperationResult(success=False, error=e)

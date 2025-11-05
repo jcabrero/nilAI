@@ -1,20 +1,21 @@
-from nilai_api.auth.nuc_helpers import (
-    get_wallet_and_private_key,
-    pay_for_subscription,
-    get_root_token,
-    get_delegation_token,
-    get_nilai_public_key,
-    get_invocation_token,
-    validate_token,
-    InvocationToken,
-    RootToken,
-    DelegationToken,
-    NilAuthPublicKey,
-    NilAuthPrivateKey,
-)
 from nuc.nilauth import NilauthClient
 from nuc.token import Did
-from nuc.validate import ValidationParameters, InvocationRequirement
+from nuc.validate import InvocationRequirement, ValidationParameters
+
+from nilai_api.auth.nuc_helpers import (
+    DelegationToken,
+    InvocationToken,
+    NilAuthPrivateKey,
+    NilAuthPublicKey,
+    RootToken,
+    get_delegation_token,
+    get_invocation_token,
+    get_nilai_public_key,
+    get_root_token,
+    get_wallet_and_private_key,
+    pay_for_subscription,
+    validate_token,
+)
 
 
 def b2b2b2c_test():
@@ -25,9 +26,7 @@ def b2b2b2c_test():
     NILCHAIN_GRPC = "localhost:26649"
 
     # Server private key
-    server_wallet, server_keypair, server_private_key = get_wallet_and_private_key(
-        PRIVATE_KEY
-    )
+    server_wallet, server_keypair, server_private_key = get_wallet_and_private_key(PRIVATE_KEY)
     nilauth_client = NilauthClient(f"http://{NILAUTH_ENDPOINT}")
 
     # Pay for the subscription
@@ -77,9 +76,7 @@ def b2b2b2c_test():
         )
         print("[>] Validated delegation token: ", type(delegation_token))
 
-    nilai_public_key: NilAuthPublicKey = get_nilai_public_key(
-        f"http://{NILAI_ENDPOINT}"
-    )
+    nilai_public_key: NilAuthPublicKey = get_nilai_public_key(f"http://{NILAI_ENDPOINT}")
 
     invocation_token: InvocationToken = get_invocation_token(
         delegation_token,
@@ -108,9 +105,7 @@ def b2b2c_test():
     NILCHAIN_GRPC = "localhost:26649"
 
     # Server private key
-    server_wallet, server_keypair, server_private_key = get_wallet_and_private_key(
-        PRIVATE_KEY
-    )
+    server_wallet, server_keypair, server_private_key = get_wallet_and_private_key(PRIVATE_KEY)
     nilauth_client = NilauthClient(f"http://{NILAUTH_ENDPOINT}")
 
     # Pay for the subscription
@@ -143,9 +138,7 @@ def b2b2c_test():
     )
 
     print("Delegation token: ", delegation_token, type(delegation_token))
-    nilai_public_key: NilAuthPublicKey = get_nilai_public_key(
-        f"http://{NILAI_ENDPOINT}"
-    )
+    nilai_public_key: NilAuthPublicKey = get_nilai_public_key(f"http://{NILAI_ENDPOINT}")
     invocation_token: InvocationToken = get_invocation_token(
         delegation_token,
         nilai_public_key,
@@ -173,9 +166,7 @@ def b2c_test():
     NILCHAIN_GRPC = "localhost:26649"
 
     # Server private key
-    server_wallet, server_keypair, server_private_key = get_wallet_and_private_key(
-        PRIVATE_KEY
-    )
+    server_wallet, server_keypair, server_private_key = get_wallet_and_private_key(PRIVATE_KEY)
     nilauth_client = NilauthClient(f"http://{NILAUTH_ENDPOINT}")
 
     # Pay for the subscription
@@ -193,9 +184,7 @@ def b2c_test():
     # Create a root token
     root_token: RootToken = get_root_token(nilauth_client, server_private_key)
 
-    nilai_public_key: NilAuthPublicKey = get_nilai_public_key(
-        f"http://{NILAI_ENDPOINT}"
-    )
+    nilai_public_key: NilAuthPublicKey = get_nilai_public_key(f"http://{NILAI_ENDPOINT}")
     invocation_token: InvocationToken = get_invocation_token(
         root_token,
         nilai_public_key,

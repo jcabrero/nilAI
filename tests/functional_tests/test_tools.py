@@ -32,9 +32,7 @@ def test_tools():
 
     response = client.chat.completions.create(
         model="meta-llama/Llama-3.2-3B-Instruct",
-        messages=[
-            {"role": "user", "content": "What is the weather like in Paris today?"}
-        ],
+        messages=[{"role": "user", "content": "What is the weather like in Paris today?"}],
         tools=tools,  # type: ignore
     )
     print(response)

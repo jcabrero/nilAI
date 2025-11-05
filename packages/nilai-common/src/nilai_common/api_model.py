@@ -1,41 +1,35 @@
 from __future__ import annotations
 
-import uuid
+from collections.abc import Iterable
 from typing import (
     Annotated,
-    Iterable,
-    List,
-    Optional,
     Any,
-    cast,
-    TypeAlias,
     Literal,
-    Union,
+    TypeAlias,
+    cast,
 )
+import uuid
 
 from openai.types.chat import (
     ChatCompletion,
+    ChatCompletionMessage,
     ChatCompletionMessageParam,
     ChatCompletionToolParam,
-    ChatCompletionMessage,
 )
-
+from openai.types.chat.chat_completion import Choice as OpenaAIChoice
+from openai.types.chat.chat_completion_content_part_image_param import (
+    ChatCompletionContentPartImageParam,
+)
+from openai.types.chat.chat_completion_content_part_text_param import (
+    ChatCompletionContentPartTextParam,
+)
 from openai.types.chat.chat_completion_message_tool_call import (
     ChatCompletionMessageToolCall,
     Function,
 )
-
-from openai.types.chat.chat_completion_content_part_text_param import (
-    ChatCompletionContentPartTextParam,
-)
-from openai.types.chat.chat_completion_content_part_image_param import (
-    ChatCompletionContentPartImageParam,
-)
-
 from openai.types.completion_usage import CompletionUsage as Usage
-
-from openai.types.chat.chat_completion import Choice as OpenaAIChoice
 from pydantic import BaseModel, Field
+
 
 ChatToolFunction: TypeAlias = Function
 
@@ -46,33 +40,33 @@ Message: TypeAlias = ChatCompletionMessageParam  # SDK union of message shapes
 
 # Explicitly re-export OpenAI types that are part of our public API
 __all__ = [
+    "AMDAttestationToken",
+    "AttestationReport",
     "ChatCompletion",
     "ChatCompletionMessage",
     "ChatCompletionMessageToolCall",
-    "ChatToolFunction",
-    "Function",
-    "ImageContent",
-    "TextContent",
-    "Message",
-    "ResultContent",
-    "Choice",
-    "Source",
-    "SearchResult",
-    "Topic",
-    "TopicResponse",
-    "TopicQuery",
-    "MessageAdapter",
-    "WebSearchEnhancedMessages",
-    "WebSearchContext",
     "ChatRequest",
-    "SignedChatCompletion",
-    "ModelMetadata",
-    "ModelEndpoint",
+    "ChatToolFunction",
+    "Choice",
+    "Function",
     "HealthCheckResponse",
-    "AttestationReport",
-    "AMDAttestationToken",
+    "ImageContent",
+    "Message",
+    "MessageAdapter",
+    "ModelEndpoint",
+    "ModelMetadata",
     "NVAttestationToken",
+    "ResultContent",
+    "SearchResult",
+    "SignedChatCompletion",
+    "Source",
+    "TextContent",
+    "Topic",
+    "TopicQuery",
+    "TopicResponse",
     "Usage",
+    "WebSearchContext",
+    "WebSearchEnhancedMessages",
 ]
 
 
@@ -97,7 +91,7 @@ class SearchResult(BaseModel):
     url: str
     content: ResultContent | None = None
 
-    def as_source(self) -> "Source":
+    def as_source(self) -> Source:
         text = self.content.text if self.content else self.body
         return Source(source=self.url, content=text)
 
@@ -113,7 +107,7 @@ class Topic(BaseModel):
 
 
 class TopicResponse(BaseModel):
-    topics: List[Topic]
+    topics: list[Topic]
 
 
 class TopicQuery(BaseModel):
@@ -122,7 +116,7 @@ class TopicQuery(BaseModel):
 
 
 # ---------- Helpers ----------
-def _extract_text_from_content(content: Any) -> Optional[str]:
+def _extract_text_from_content(content: Any) -> str | None:
     """
     - If content is a str -> return it (stripped) if non-empty.
     - If content is a list of content parts -> concatenate 'text' parts.
@@ -132,7 +126,7 @@ def _extract_text_from_content(content: Any) -> Optional[str]:
         s = content.strip()
         return s or None
     if isinstance(content, list):
-        parts: List[str] = []
+        parts: list[str] = []
         for part in content:
             if isinstance(part, dict) and part.get("type") == "text":
                 t = part.get("text")
@@ -151,7 +145,7 @@ class MessageAdapter(BaseModel):
 
     @property
     def role(self) -> str:
-        return cast(str, self.raw.get("role"))
+        return cast("str", self.raw.get("role"))
 
     @role.setter
     def role(
@@ -162,7 +156,7 @@ class MessageAdapter(BaseModel):
             raise TypeError("role must be a string")
         # Update the underlying SDK message dict
         # Cast to Any to bypass TypedDict restrictions
-        cast(Any, self.raw)["role"] = value
+        cast("Any", self.raw)["role"] = value
 
     @property
     def content(self) -> Any:
@@ -172,14 +166,14 @@ class MessageAdapter(BaseModel):
     def content(self, value: Any) -> None:
         # Update the underlying SDK message dict
         # Cast to Any to bypass TypedDict restrictions
-        cast(Any, self.raw)["content"] = value
+        cast("Any", self.raw)["content"] = value
 
     @staticmethod
     def new_message(
         role: Literal["developer", "user", "system", "assistant", "tool", "function"],
-        content: Union[str, List[Any]],
+        content: str | list[Any],
     ) -> Message:
-        message: Message = cast(Message, {"role": role, "content": content})
+        message: Message = cast("Message", {"role": role, "content": content})
         return message
 
     @staticmethod
@@ -199,7 +193,7 @@ class MessageAdapter(BaseModel):
         }
         """
         message: Message = cast(
-            Message,
+            "Message",
             {
                 "role": "tool",
                 "name": name,
@@ -211,7 +205,7 @@ class MessageAdapter(BaseModel):
 
     @staticmethod
     def new_assistant_tool_call_message(
-        tool_calls: List[ChatCompletionMessageToolCall],
+        tool_calls: list[ChatCompletionMessageToolCall],
     ) -> Message:
         """Create an assistant message carrying tool_calls.
 
@@ -223,7 +217,7 @@ class MessageAdapter(BaseModel):
         }
         """
         return cast(
-            Message,
+            "Message",
             {
                 "role": "assistant",
                 "tool_calls": [tc.model_dump(exclude_unset=True) for tc in tool_calls],
@@ -234,7 +228,7 @@ class MessageAdapter(BaseModel):
     @staticmethod
     def new_completion_message(content: str) -> ChatCompletionMessage:
         message: ChatCompletionMessage = cast(
-            ChatCompletionMessage, {"role": "assistant", "content": content}
+            "ChatCompletionMessage", {"role": "assistant", "content": content}
         )
         return message
 
@@ -256,7 +250,7 @@ class MessageAdapter(BaseModel):
                 return True
         return False
 
-    def extract_text(self) -> Optional[str]:
+    def extract_text(self) -> str | None:
         return _extract_text_from_content(self.content)
 
     def to_openai_param(self) -> Message:
@@ -264,35 +258,35 @@ class MessageAdapter(BaseModel):
         return self.raw
 
 
-def adapt_messages(msgs: List[Message]) -> List[MessageAdapter]:
+def adapt_messages(msgs: list[Message]) -> list[MessageAdapter]:
     return [MessageAdapter(raw=m) for m in msgs]
 
 
 # ---------- Your additional containers ----------
 class WebSearchEnhancedMessages(BaseModel):
-    messages: List[Message]
-    sources: List[Source]
+    messages: list[Message]
+    sources: list[Source]
 
 
 class WebSearchContext(BaseModel):
     """Prompt and sources obtained from a web search."""
 
     prompt: str
-    sources: List[Source]
+    sources: list[Source]
 
 
 # ---------- Request/response models ----------
 class ChatRequest(BaseModel):
     model: str
-    messages: List[Message] = Field(..., min_length=1)
-    temperature: Optional[float] = Field(default=None, ge=0.0, le=5.0)
-    top_p: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    max_tokens: Optional[int] = Field(default=None, ge=1, le=100000)
-    stream: Optional[bool] = False
-    tools: Optional[Iterable[ChatCompletionToolParam]] = None
-    tool_choice: Optional[Union[str, dict]] = "auto"
-    nilrag: Optional[dict] = {}
-    web_search: Optional[bool] = Field(
+    messages: list[Message] = Field(..., min_length=1)
+    temperature: float | None = Field(default=None, ge=0.0, le=5.0)
+    top_p: float | None = Field(default=None, ge=0.0, le=1.0)
+    max_tokens: int | None = Field(default=None, ge=1, le=100000)
+    stream: bool | None = False
+    tools: Iterable[ChatCompletionToolParam] | None = None
+    tool_choice: str | dict | None = "auto"
+    nilrag: dict | None = {}
+    web_search: bool | None = Field(
         default=False,
         description="Enable web search to enhance context with current information",
     )
@@ -307,13 +301,13 @@ class ChatRequest(BaseModel):
                 and hasattr(content, "__next__")
             ):
                 # Convert iterator to list in place
-                cast(Any, msg)["content"] = list(content)
+                cast("Any", msg)["content"] = list(content)
 
     @property
-    def adapted_messages(self) -> List[MessageAdapter]:
+    def adapted_messages(self) -> list[MessageAdapter]:
         return adapt_messages(self.messages)
 
-    def get_last_user_query(self) -> Optional[str]:
+    def get_last_user_query(self) -> str | None:
         """
         Returns the latest non-empty user text (plain or from content parts),
         or None if not found.
@@ -342,17 +336,13 @@ class ChatRequest(BaseModel):
         msgs = self.messages
 
         if not msgs:
-            msgs.insert(
-                0, MessageAdapter.new_message(role="system", content=system_content)
-            )
+            msgs.insert(0, MessageAdapter.new_message(role="system", content=system_content))
             return
 
         first_message = msgs[0]
 
         if first_message.get("role") != "system":
-            msgs.insert(
-                0, MessageAdapter.new_message(role="system", content=system_content)
-            )
+            msgs.insert(0, MessageAdapter.new_message(role="system", content=system_content))
             return
 
         existing_text = MessageAdapter(raw=first_message).extract_text() or ""
@@ -369,7 +359,7 @@ class ChatRequest(BaseModel):
 
 class SignedChatCompletion(ChatCompletion):
     signature: str
-    sources: Optional[List[Source]] = Field(
+    sources: list[Source] | None = Field(
         default=None, description="Sources used for web search when enabled"
     )
 
@@ -382,7 +372,7 @@ class ModelMetadata(BaseModel):
     author: str
     license: str
     source: str
-    supported_features: List[str]
+    supported_features: list[str]
     tool_support: bool
     multimodal_support: bool = False
 

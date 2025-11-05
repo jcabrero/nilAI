@@ -1,21 +1,23 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-import logging
-import functools
-import sqlalchemy
-
-from typing import Any, Optional, AsyncGenerator
 from dataclasses import dataclass
 from datetime import timedelta
+import functools
+import logging
+from typing import Any, Optional
 
-from sqlalchemy import AsyncAdaptedQueuePool, Column as _Column
+import sqlalchemy
+from sqlalchemy import AsyncAdaptedQueuePool
+from sqlalchemy import Column as _Column
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from nilai_api.config import CONFIG
 
-_engine: Optional[sqlalchemy.ext.asyncio.AsyncEngine] = None
-_SessionLocal: Optional[sessionmaker] = None
+
+_engine: sqlalchemy.ext.asyncio.AsyncEngine | None = None
+_SessionLocal: sessionmaker | None = None
 
 # Create base and engine with improved configuration
 Base = sqlalchemy.orm.declarative_base()

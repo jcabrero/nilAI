@@ -6,10 +6,11 @@ This script fetches the latest version from Test PyPI, increments the alpha vers
 and updates the pyproject.toml file accordingly.
 """
 
-import requests
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
+
+import requests
 
 
 def get_latest_version(package_name="nilai-py"):
@@ -23,9 +24,7 @@ def get_latest_version(package_name="nilai-py"):
         str: Latest version string, or "0.0.0a0" if package doesn't exist
     """
     try:
-        response = requests.get(
-            f"https://test.pypi.org/pypi/{package_name}/json", timeout=10
-        )
+        response = requests.get(f"https://test.pypi.org/pypi/{package_name}/json", timeout=10)
         if response.status_code == 404:
             # Package doesn't exist yet, start with 0.0.0a1
             print(f"Package {package_name} not found on Test PyPI, starting fresh")
@@ -74,10 +73,9 @@ def increment_version(version):
         new_version = f"{major}.{minor}.{patch}a{new_alpha}"
         print(f"Incrementing {version} -> {new_version}")
         return new_version
-    else:
-        # If no match, start with a1
-        print(f"Could not parse version {version}, defaulting to 0.0.0a1")
-        return "0.0.0a1"
+    # If no match, start with a1
+    print(f"Could not parse version {version}, defaulting to 0.0.0a1")
+    return "0.0.0a1"
 
 
 def update_pyproject_version(new_version, pyproject_path="pyproject.toml"):

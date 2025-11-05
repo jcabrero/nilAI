@@ -1,20 +1,19 @@
 import datetime
+import glob
 import json
 import os
-import glob
-from typing import Optional, Tuple, List
 
+from secretvaults import SecretVaultUserClient
 from secretvaults.common.blindfold import BlindfoldFactoryConfig, BlindfoldOperation
 from secretvaults.common.keypair import Keypair
-from secretvaults import SecretVaultUserClient
 
-from nilai_py.nildb.models import UserSetupResult, KeyData, KeypairInfo
 from nilai_py.nildb.config import NilDBConfig
+from nilai_py.nildb.models import KeyData, KeypairInfo, UserSetupResult
 
 
 def save_keypair_to_json(
     keypair: Keypair, keys_dir: str = "keys"
-) -> Tuple[bool, Optional[str], Optional[str]]:
+) -> tuple[bool, str | None, str | None]:
     """Save keypair to separate JSON files for private and public keys"""
     try:
         # Create keys directory if it doesn't exist
@@ -44,9 +43,7 @@ def save_keypair_to_json(
 
         # Save private key
         with open(private_key_file, "w") as f:
-            json.dump(
-                private_key_data.model_dump(mode="json"), f, indent=2, default=str
-            )
+            json.dump(private_key_data.model_dump(mode="json"), f, indent=2, default=str)
 
         # Save public key
         with open(public_key_file, "w") as f:
@@ -60,13 +57,13 @@ def save_keypair_to_json(
 
 def load_keypair_from_json(
     private_key_file: str,
-) -> Tuple[bool, Optional[Keypair], Optional[str]]:
+) -> tuple[bool, Keypair | None, str | None]:
     """Load keypair from private key JSON file"""
     try:
         if not os.path.exists(private_key_file):
             return False, None, f"Private key file not found: {private_key_file}"
 
-        with open(private_key_file, "r") as f:
+        with open(private_key_file) as f:
             data = json.load(f)
 
         # Parse using Pydantic model
@@ -88,22 +85,16 @@ def load_keypair_from_json(
         return False, None, str(e)
 
 
-async def setup_user_core(
-    config: NilDBConfig, keys_dir: str = "keys"
-) -> UserSetupResult:
+async def setup_user_core(config: NilDBConfig, keys_dir: str = "keys") -> UserSetupResult:
     """Setup user keypair and client - core functionality without UI concerns"""
     try:
         # Generate a new user keypair
         user_keypair = Keypair.generate()
 
         # Save keypair to JSON files
-        save_success, private_file, public_file = save_keypair_to_json(
-            user_keypair, keys_dir
-        )
+        save_success, private_file, public_file = save_keypair_to_json(user_keypair, keys_dir)
         if not save_success:
-            return UserSetupResult(
-                success=False, error=f"Failed to save keypair: {public_file}"
-            )
+            return UserSetupResult(success=False, error=f"Failed to save keypair: {public_file}")
 
         # Create user client
         user_client = await SecretVaultUserClient.from_options(
@@ -132,17 +123,13 @@ async def setup_user_core(
 
 
 def store_keypair(
-    keypair: Keypair, keys_dir: str = "keys", name_prefix: Optional[str] = None
-) -> Tuple[bool, Optional[str], Optional[str]]:
+    keypair: Keypair, keys_dir: str = "keys", name_prefix: str | None = None
+) -> tuple[bool, str | None, str | None]:
     """Store keypair to files with optional custom prefix"""
     if name_prefix:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        private_key_file = os.path.join(
-            keys_dir, f"{name_prefix}_private_key_{timestamp}.json"
-        )
-        public_key_file = os.path.join(
-            keys_dir, f"{name_prefix}_public_key_{timestamp}.json"
-        )
+        private_key_file = os.path.join(keys_dir, f"{name_prefix}_private_key_{timestamp}.json")
+        public_key_file = os.path.join(keys_dir, f"{name_prefix}_public_key_{timestamp}.json")
 
         try:
             os.makedirs(keys_dir, exist_ok=True)
@@ -166,15 +153,11 @@ def store_keypair(
 
             # Save private key
             with open(private_key_file, "w") as f:
-                json.dump(
-                    private_key_data.model_dump(mode="json"), f, indent=2, default=str
-                )
+                json.dump(private_key_data.model_dump(mode="json"), f, indent=2, default=str)
 
             # Save public key
             with open(public_key_file, "w") as f:
-                json.dump(
-                    public_key_data.model_dump(mode="json"), f, indent=2, default=str
-                )
+                json.dump(public_key_data.model_dump(mode="json"), f, indent=2, default=str)
 
             return True, private_key_file, public_key_file
 
@@ -187,14 +170,14 @@ def store_keypair(
 
 def load_keypair(
     private_key_file: str,
-) -> Tuple[bool, Optional[Keypair], Optional[str]]:
+) -> tuple[bool, Keypair | None, str | None]:
     """Load keypair from private key file (alias for load_keypair_from_json)"""
     return load_keypair_from_json(private_key_file)
 
 
 def load_keypair_by_name(
     name_prefix: str, keys_dir: str = "keys"
-) -> Tuple[bool, Optional[Keypair], Optional[str]]:
+) -> tuple[bool, Keypair | None, str | None]:
     """Load keypair by searching for files with given name prefix"""
     try:
         # Search for private key files with the given prefix
@@ -218,7 +201,7 @@ def load_keypair_by_name(
         return False, None, str(e)
 
 
-def list_stored_keypairs(keys_dir: str = "keys") -> List[KeypairInfo]:
+def list_stored_keypairs(keys_dir: str = "keys") -> list[KeypairInfo]:
     """List all stored keypairs in the directory"""
     try:
         if not os.path.exists(keys_dir):
@@ -230,7 +213,7 @@ def list_stored_keypairs(keys_dir: str = "keys") -> List[KeypairInfo]:
 
         for private_key_file in private_key_files:
             try:
-                with open(private_key_file, "r") as f:
+                with open(private_key_file) as f:
                     data = json.load(f)
 
                 # Parse using Pydantic model
@@ -247,9 +230,7 @@ def list_stored_keypairs(keys_dir: str = "keys") -> List[KeypairInfo]:
                         if private_key_data.created_at
                         else None,
                         name=private_key_data.name or "unnamed",
-                        did=keypair.to_did_string()
-                        if success and keypair
-                        else "unknown",
+                        did=keypair.to_did_string() if success and keypair else "unknown",
                     )
                     keypairs.append(keypair_info)
             except Exception:
@@ -263,14 +244,14 @@ def list_stored_keypairs(keys_dir: str = "keys") -> List[KeypairInfo]:
         return []
 
 
-def delete_keypair_files(private_key_file: str) -> Tuple[bool, Optional[str]]:
+def delete_keypair_files(private_key_file: str) -> tuple[bool, str | None]:
     """Delete both private and public key files"""
     try:
         if not os.path.exists(private_key_file):
             return False, f"Private key file not found: {private_key_file}"
 
         # Read private key file to find public key file
-        with open(private_key_file, "r") as f:
+        with open(private_key_file) as f:
             data = json.load(f)
 
         # Parse using Pydantic model
@@ -290,9 +271,7 @@ def delete_keypair_files(private_key_file: str) -> Tuple[bool, Optional[str]]:
         return False, str(e)
 
 
-async def create_user_if_not_exists(
-    config: NilDBConfig, keys_dir: str = "keys"
-) -> UserSetupResult:
+async def create_user_if_not_exists(config: NilDBConfig, keys_dir: str = "keys") -> UserSetupResult:
     """Create a user if no existing keypair exists in the keys directory"""
     try:
         # Check if any keypairs already exist
@@ -300,12 +279,8 @@ async def create_user_if_not_exists(
 
         if existing_keypairs:
             # Load the most recent keypair
-            latest_keypair_info = existing_keypairs[
-                0
-            ]  # Already sorted by creation time
-            success, keypair, error = load_keypair_from_json(
-                latest_keypair_info.private_key_file
-            )
+            latest_keypair_info = existing_keypairs[0]  # Already sorted by creation time
+            success, keypair, error = load_keypair_from_json(latest_keypair_info.private_key_file)
             if not success or keypair is None:
                 return UserSetupResult(
                     success=False, error=f"Failed to load existing keypair: {error}"
@@ -320,10 +295,7 @@ async def create_user_if_not_exists(
                 ),
             )
 
-            if (
-                not latest_keypair_info.private_key_file
-                or not latest_keypair_info.public_key_file
-            ):
+            if not latest_keypair_info.private_key_file or not latest_keypair_info.public_key_file:
                 return UserSetupResult(
                     success=False, error=f"Failed to load existing keypair: {error}"
                 )
@@ -337,9 +309,8 @@ async def create_user_if_not_exists(
                     "public_key": latest_keypair_info.public_key_file,
                 },
             )
-        else:
-            # No existing keypairs, create new user
-            return await setup_user_core(config, keys_dir)
+        # No existing keypairs, create new user
+        return await setup_user_core(config, keys_dir)
 
     except Exception as e:
         return UserSetupResult(success=False, error=str(e))

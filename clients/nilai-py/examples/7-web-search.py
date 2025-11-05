@@ -1,6 +1,6 @@
-from nilai_py import Client
-
 from config import API_KEY
+
+from nilai_py import Client
 
 
 def main():

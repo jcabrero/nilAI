@@ -1,11 +1,11 @@
 import logging
-from typing import Union
 
+from fastapi import HTTPException, status
 import nilrag
+from sentence_transformers import SentenceTransformer
 
 from nilai_common import ChatRequest, MessageAdapter
-from fastapi import HTTPException, status
-from sentence_transformers import SentenceTransformer
+
 
 logger = logging.getLogger(__name__)
 embeddings_model = None
@@ -24,7 +24,7 @@ def get_embeddings_model():
 
 
 def generate_embeddings_huggingface(
-    chunks_or_query: Union[str, list],
+    chunks_or_query: str | list,
 ):
     """
     Generate embeddings for text using a HuggingFace sentence transformer model.
@@ -85,9 +85,7 @@ async def handle_nilrag(req: ChatRequest):
         top_results = await nilDB.top_num_chunks_execute(query, num_chunks)
 
         # Step 3: Format top results
-        formatted_results = "\n".join(
-            f"- {str(result['distances'])}" for result in top_results
-        )
+        formatted_results = "\n".join(f"- {result['distances']!s}" for result in top_results)
         relevant_context = f"\n\nRelevant Context:\n{formatted_results}"
 
         # Step 4: Update system message
@@ -118,6 +116,4 @@ async def handle_nilrag(req: ChatRequest):
 
     except Exception as e:
         logger.error("An error occurred within nilrag: %s", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

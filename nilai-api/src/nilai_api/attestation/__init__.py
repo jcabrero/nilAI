@@ -1,6 +1,8 @@
 from fastapi import HTTPException
 import httpx
+
 from nilai_common import AttestationReport
+
 
 ATTESTATION_URL = "http://nilcc-attester/v2/report"
 

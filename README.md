@@ -1,7 +1,68 @@
 # nilAI
 
+**An AI model serving platform powered by secure, confidential computing.**
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com)
+[![vLLM](https://img.shields.io/badge/vLLM-0.10+-orange.svg)](https://github.com/vllm-project/vllm)
+
+---
+
+## 🚀 Quick Start (10 Minutes)
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/jcabrero/nilAI.git
+cd nilAI
+
+# 2. Set up development environment
+make setup
+
+# 3. Configure environment
+cp .env.sample .env
+# Edit .env with your Hugging Face token and other settings
+
+# 4. Run database migrations
+make migration-upgrade
+
+# 5. Start development server
+make serve
+```
+
+Your API is now running at `http://localhost:8080`
+
+**Test it:**
+```bash
+curl http://localhost:8080/healthz
+# {"status": "healthy", "uptime": "5.23s"}
+```
+
+**View API docs:** http://localhost:8080/docs
+
+---
+
+## 📚 Documentation
+
+- **[PLAN.md](./PLAN.md)** - Phased upgrade strategy and roadmap
+- **[CODESTYLE.md](./CODESTYLE.md)** - Python code standards and best practices
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - How to contribute (setup, workflow, PR process)
+- **[SECURITY.md](./SECURITY.md)** - Security threat model and hardening guide
+- **[MIGRATION.md](./MIGRATION.md)** - Migration guide for v0.1.0 → v0.2.0
+
+---
+
 ## Overview
-nilAI is a platform designed to run on Confidential VMs with Trusted Execution Environments (TEEs). It ensures secure deployment and management of multiple AI models across different environments, providing a unified API interface for accessing various AI models with robust user management and model lifecycle handling.
+
+nilAI is a production-ready platform designed to run on Confidential VMs with Trusted Execution Environments (TEEs). It ensures secure deployment and management of multiple AI models across different environments, providing a unified API interface with:
+
+- ✅ **Cryptographic attestation** for service verification
+- ✅ **Multi-strategy authentication** (API keys, NUC tokens)
+- ✅ **Rate limiting** and request validation
+- ✅ **Streaming support** with EventSource
+- ✅ **Tool calling** (Python code execution)
+- ✅ **Web search integration** (Brave API)
+- ✅ **Vector RAG** (NilRAG)
 
 ## Prerequisites
 
